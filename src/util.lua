@@ -3,7 +3,7 @@ local function charHexToBin(hex)
 end
 
 local function charBinToHex(bin)
-    return string.format('%02X', bin:byte())
+  return string.format('%02X', bin:byte())
 end
 
 local function hexToBin(hex)
@@ -11,10 +11,7 @@ local function hexToBin(hex)
 end
 
 local function binToHex(bin)
-    return (bin:gsub('.', charBinToHex))
+  return (bin:gsub('.', charBinToHex))
 end
 
-return {
-  hexToBin = hexToBin,
-  binToHex = binToHex
-}
+return {hexToBin = hexToBin, binToHex = binToHex}
