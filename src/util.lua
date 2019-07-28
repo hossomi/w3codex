@@ -14,4 +14,7 @@ local function binToHex(bin)
   return (bin:gsub('.', charBinToHex))
 end
 
-return {hexToBin = hexToBin, binToHex = binToHex}
+return {
+  hexToBin = hexToBin,
+  binToHex = binToHex
+}
