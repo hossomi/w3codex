@@ -138,6 +138,20 @@ describe('WIO', function()
         assert.are.is_nil(reader:real())
       end)
     end)
+
+    describe('color()', function()
+
+      it('should read in order', function()
+        local reader = wio.FileReader('test/wio/color.bin')
+        assert.are.same(reader:color(),
+            {red = 160, green = 176, blue = 192, alpha = 208})
+      end)
+
+      it('should return nil if no more data', function()
+        local reader = wio.FileReader('test/wio/empty.bin')
+        assert.are.is_nil(reader:color())
+      end)
+    end)
   end)
 
   describe('FileWriter', function()
@@ -148,7 +162,7 @@ describe('WIO', function()
       assert.data = function(expected)
         writer:close()
         local file = assert(io.open('test/wio/out.bin', 'rb'))
-        assert.are.equals(expected, file:read('*all'))
+        assert.are.equals(file:read('*all'), expected)
       end
     end)
 
@@ -189,6 +203,11 @@ describe('WIO', function()
     it('should write real little endian', function()
       writer:real(1.23)
       assert.data(util.hexToBin('A4709D3F'))
+    end)
+
+    it('should write color', function()
+      writer:color({red = 65, green = 66, blue = 67, alpha = 68})
+      assert.data('ABCD')
     end)
   end)
 

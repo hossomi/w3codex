@@ -1,12 +1,12 @@
 local function unpack(data, format)
   if data then
-    return (format:unpack(data))
+    return format:unpack(data)
   end
 end
 
 local function pack(data, format)
   if data then
-    return (format:pack(data))
+    return format:pack(data)
   end
 end
 
@@ -116,15 +116,23 @@ local function FileReader(file, bsize)
     end,
 
     int = function(self)
-      return unpack(self:read(4), '<I4')
+      return (unpack(self:read(4), '<i4'))
     end,
 
     short = function(self)
-      return unpack(self:read(2), '<I2')
+      return (unpack(self:read(2), '<i2'))
     end,
 
     real = function(self)
-      return unpack(self:read(4), '<f')
+      return (unpack(self:read(4), '<f'))
+    end,
+
+    color = function(self)
+      local data = self:read(4)
+      if data then
+        local red, green, blue, alpha = unpack(data, 'BBBB')
+        return {red = red, green = green, blue = blue, alpha = alpha}
+      end
     end
   }
 end
@@ -159,15 +167,22 @@ local function FileWriter(file, bsize)
     end,
 
     int = function(self, data)
-      self:write(pack(data, '<I4'))
+      self:write((pack(data, '<i4')))
     end,
 
     short = function(self, data)
-      self:write(pack(data, '<I2'))
+      self:write((pack(data, '<i2')))
     end,
 
     real = function(self, data)
-      self:write(pack(data, '<f'))
+      self:write((pack(data, '<f')))
+    end,
+
+    color = function(self, data)
+      if data then
+        self:write(string.pack('BBBB', data.red or 0, data.green or 0,
+                       data.blue or 0, data.alpha or 0))
+      end
     end
   }
 end
