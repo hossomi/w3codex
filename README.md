@@ -32,4 +32,13 @@ luarocks --tree .luarocks make
 
 ## File formats
 
-*None yet!*
+### Map details (.w3i)
+
+| Field           | Type     | Description      |
+| --------------- | -------- | ---------------- |
+| Format version  | `int`    | Always `18`.     |
+| `version`       | `int`    | Number of saves. |
+| `editorVersion` | `int`    |                  |
+| `name`          | `string` | Map name.        |
+| `author`        | `string` | Map author.      |
+| `description`   | `string` | Map description. |
