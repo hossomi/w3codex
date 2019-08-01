@@ -64,7 +64,7 @@ local function decode(path)
 
   map.tileset = reader:bytes(1)
 
-  map.loading = {
+  map.loadingScreen = {
     preset = util.filterNot(reader:int(), -1),
     custom = util.filterNot(reader:string(), ''),
     text = reader:string(),
@@ -89,7 +89,7 @@ local function decode(path)
   }
 
   map.weather = {
-    global = util.filterNot(reader:int(), 0),
+    global = util.filterNot(reader:bytes(4), '\0\0\0\0'),
     sound = util.filterNot(reader:string(), ''),
     light = util.filterNot(reader:bytes(1), '\0')
   }
