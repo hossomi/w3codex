@@ -10,7 +10,7 @@ A Lua library to convert Warcraft III files to and from JSON.
     - [`Bounds[T]`](#boundst)
     - [`Rect[T]`](#rectt)
   - [File formats](#file-formats)
-    - [_war3map.w3i_ - Map properties](#war3map-w3i-map-properties)
+    - [_war3map.w3i_ - Map properties](#war3mapw3i---map-properties)
       - [Map area](#map-area)
       - [Map settings](#map-settings)
       - [Map loading screen](#map-loading-screen)
