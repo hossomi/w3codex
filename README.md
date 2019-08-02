@@ -110,6 +110,7 @@ Order may vary, always specified in the description.
 | `tileset`            | `char`                                   | Map base tileset. |
 | `loadingScreen`      | [`MapLoadingScreen`](map-loading-screen) |                   |
 | `dataset`            | `int`                                    |                   |
+| ?                    | `string[4]`                              |                   |
 | `fog`                | [`MapFog`](#map-fog)                     |                   |
 | `weather`            | [`MapWeather`](#map-weather)             |                   |
 | `water`              | [`MapWater`](#map-water)                 |                   |

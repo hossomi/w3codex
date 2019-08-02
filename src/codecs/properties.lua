@@ -47,19 +47,19 @@ local function decode(path)
 
   local flags = reader:int()
   map.settings = {
-    isMeleeMap = flags & 0x0004 == 1,
-    isMaskedAreaVisible = flags & 0x0010 == 1,
-    hideMinimap = flags & 0x0001 == 1,
-    showWavesOnCliffShores = flags & 0x0800 == 1,
-    showWavesOnRollingShores = flags & 0x1000 == 1,
-    allyPriorities = {custom = flags & 0x0002 == 1},
+    isMeleeMap = flags & 0x0004 ~= 0,
+    isMaskedAreaVisible = flags & 0x0010 ~= 0,
+    hideMinimap = flags & 0x0001 ~= 0,
+    showWavesOnCliffShores = flags & 0x0800 ~= 0,
+    showWavesOnRollingShores = flags & 0x1000 ~= 0,
+    allyPriorities = {custom = flags & 0x0002 ~= 0},
     forces = {
-      custom = flags & 0x0040 == 1,
-      fixedPlayerSettings = flags & 0x0020 == 1
+      custom = flags & 0x0040 ~= 1,
+      fixedPlayerSettings = flags & 0x0020 ~= 1
     },
-    techtree = {custom = flags & 0x0080 == 1},
-    abilities = {custom = flags & 0x0100 == 1},
-    upgrades = {custom = flags & 0x0200 == 1}
+    techtree = {custom = flags & 0x0080 ~= 1},
+    abilities = {custom = flags & 0x0100 ~= 1},
+    upgrades = {custom = flags & 0x0200 ~= 1}
   }
 
   map.tileset = reader:bytes(1)
@@ -101,7 +101,7 @@ local function decode(path)
   return map
 end
 
-map = decode('test/maps/sample-1.w3x/war3map.w3i')
+map = decode('test/maps/sample-2.w3x/war3map.w3i')
 -- writer = wio.FileWriter('test/json/map.json')
 print(json.encode(map, {pretty = true}))
 -- writer:close()
