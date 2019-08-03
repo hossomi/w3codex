@@ -51,14 +51,9 @@ function InitTechTree_Player1()
     SetPlayerTechMaxAllowed(Player(1), FourCC("opeo"), 0)
 end
 
-function InitTechTree_Player2()
-    SetPlayerAbilityAvailable(Player(2), FourCC("AUan"), false)
-end
-
 function InitTechTree()
     InitTechTree_Player0()
     InitTechTree_Player1()
-    InitTechTree_Player2()
 end
 
 function InitCustomPlayerSlots()
@@ -74,17 +69,17 @@ function InitCustomPlayerSlots()
     SetPlayerRacePreference(Player(1), RACE_PREF_ORC)
     SetPlayerRaceSelectable(Player(1), false)
     SetPlayerController(Player(1), MAP_CONTROL_USER)
-    SetPlayerStartLocation(Player(2), 2)
-    SetPlayerColor(Player(2), ConvertPlayerColor(2))
-    SetPlayerRacePreference(Player(2), RACE_PREF_UNDEAD)
-    SetPlayerRaceSelectable(Player(2), false)
-    SetPlayerController(Player(2), MAP_CONTROL_COMPUTER)
+    SetPlayerStartLocation(Player(3), 2)
+    SetPlayerColor(Player(3), ConvertPlayerColor(3))
+    SetPlayerRacePreference(Player(3), RACE_PREF_NIGHTELF)
+    SetPlayerRaceSelectable(Player(3), false)
+    SetPlayerController(Player(3), MAP_CONTROL_COMPUTER)
 end
 
 function InitCustomTeams()
     SetPlayerTeam(Player(0), 0)
     SetPlayerTeam(Player(1), 0)
-    SetPlayerTeam(Player(2), 1)
+    SetPlayerTeam(Player(3), 1)
 end
 
 function InitAllyPriorities()
@@ -92,6 +87,9 @@ function InitAllyPriorities()
     SetStartLocPrio(0, 0, 1, MAP_LOC_PRIO_LOW)
     SetStartLocPrioCount(1, 1)
     SetStartLocPrio(1, 0, 0, MAP_LOC_PRIO_HIGH)
+    SetStartLocPrioCount(2, 3)
+    SetStartLocPrio(2, 0, 0, MAP_LOC_PRIO_LOW)
+    SetStartLocPrio(2, 1, 1, MAP_LOC_PRIO_LOW)
 end
 
 function main()

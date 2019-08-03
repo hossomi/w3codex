@@ -15,6 +15,10 @@ return {
     return (bin:gsub('.', charBinToHex))
   end,
 
+  intToHex = function(int)
+    return charBinToHex(string.pack('<i4', int))
+  end,
+
   checkEqual = function(value, expected, message)
     if (value ~= expected) then
       error(message .. '\n Expected: ' .. expected .. '\n Got: ' .. value)

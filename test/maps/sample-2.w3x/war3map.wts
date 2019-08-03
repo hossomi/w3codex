@@ -43,11 +43,6 @@ STRING 9
 Player 2
 }
 
-STRING 10
-{
-Player 3
-}
-
 STRING 11
 {
 Force 1
@@ -56,5 +51,10 @@ Force 1
 STRING 12
 {
 Force 2
+}
+
+STRING 13
+{
+Player 4
 }
 
