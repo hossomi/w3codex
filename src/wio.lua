@@ -149,6 +149,13 @@ local function FileReader(file, bsize)
       })
     end,
 
+    rect = function(self, format, type)
+      return self:preformatted(format, type, {
+        W = 'width',
+        H = 'height'
+      })
+    end,
+
     preformatted = function(self, format, type, mapping)
       local data = self:read(4 * #format)
       if data then

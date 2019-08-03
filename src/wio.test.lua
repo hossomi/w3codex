@@ -153,7 +153,7 @@ describe('WIO', function()
       end)
     end)
 
-    describe('bounds(format)', function()
+    describe('bounds(format, type)', function()
 
       it('should read with i4', function()
         local reader = wio.FileReader('test/wio/bounds-integer.bin')
@@ -172,7 +172,28 @@ describe('WIO', function()
       
       it('should return nil if no more data', function()
         local reader = wio.FileReader('test/wio/integer.bin')
-        assert.is_nil(reader:bounds('LTRB'))
+        assert.is_nil(reader:bounds('LTRB', 'i4'))
+      end)
+    end)
+
+    describe('rect(format, type)', function()
+
+      it('should read with i4', function()
+        local reader = wio.FileReader('test/wio/bounds-integer.bin')
+        assert.are.same(reader:rect('WH', 'i4'),
+            {width = 1, height = 2})
+      end)
+      
+      it('should read with f', function()
+        local reader = wio.FileReader('test/wio/bounds-real.bin')
+        local rect = reader:rect('WH', 'f')
+        assert.is_true(math.abs(rect.width - 1.1) < 1E-6)
+        assert.is_true(math.abs(rect.height - 1.2) < 1E-6)
+      end)
+      
+      it('should return nil if no more data', function()
+        local reader = wio.FileReader('test/wio/integer.bin')
+        assert.is_nil(reader:rect('WH', 'i4'))
       end)
     end)
   end)

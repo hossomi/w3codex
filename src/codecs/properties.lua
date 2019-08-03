@@ -30,9 +30,9 @@ local function decode(path)
     -- Repeat camera bounds counter-clockwise?
     reader:skip(16),
 
-    complements = reader:bounds('LRBT'),
+    complements = reader:bounds('LRBT', 'i4'),
 
-    playable = {width = reader:int(), height = reader:int()}
+    playable = reader:rect('WH', 'i4')
   }
 
   map.area.width = map.area.complements.left + map.area.complements.right
