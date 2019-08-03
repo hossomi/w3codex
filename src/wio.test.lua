@@ -109,7 +109,7 @@ describe('WIO', function()
 
       it('should return nil if no more data', function()
         local reader = wio.FileReader('test/wio/empty.bin')
-        assert.are.is_nil(reader:int())
+        assert.is_nil(reader:int())
       end)
     end)
 
@@ -122,7 +122,7 @@ describe('WIO', function()
 
       it('should return nil if no more data', function()
         local reader = wio.FileReader('test/wio/empty.bin')
-        assert.are.is_nil(reader:short())
+        assert.is_nil(reader:short())
       end)
     end)
 
@@ -135,7 +135,7 @@ describe('WIO', function()
 
       it('should return nil if no more data', function()
         local reader = wio.FileReader('test/wio/empty.bin')
-        assert.are.is_nil(reader:real())
+        assert.is_nil(reader:real())
       end)
     end)
 
@@ -148,8 +148,37 @@ describe('WIO', function()
       end)
 
       it('should return nil if no more data', function()
-        local reader = wio.FileReader('test/wio/empty.bin')
-        assert.are.is_nil(reader:color())
+        local reader = wio.FileReader('test/wio/short.bin')
+        assert.is_nil(reader:color())
+      end)
+    end)
+
+    describe('bounds(format)', function()
+
+      it('should read with default', function()
+        local reader = wio.FileReader('test/wio/bounds-integer.bin')
+        assert.are.same(reader:bounds('LTRB'),
+            {left = 1, top = 2, right = 3, bottom = 4})
+      end)
+      
+      it('should read with int()', function()
+        local reader = wio.FileReader('test/wio/bounds-integer.bin')
+        assert.are.same(reader:bounds('LTRB', 'i'),
+            {left = 1, top = 2, right = 3, bottom = 4})
+      end)
+      
+      it('should read with real()', function()
+        local reader = wio.FileReader('test/wio/bounds-real.bin')
+        local bounds = reader:bounds('LTRB', 'r')
+        assert.is_true(math.abs(bounds.left - 1.1) < 1E-6)
+        assert.is_true(math.abs(bounds.top - 1.2) < 1E-6)
+        assert.is_true(math.abs(bounds.right - 1.3) < 1E-6)
+        assert.is_true(math.abs(bounds.bottom - 1.4) < 1E-6)
+      end)
+      
+      it('should return nil if no more data', function()
+        local reader = wio.FileReader('test/wio/integer.bin')
+        assert.is_nil(reader:bounds('LTRB'))
       end)
     end)
   end)

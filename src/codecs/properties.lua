@@ -25,22 +25,12 @@ local function decode(path)
   }
 
   map.area = {
-    cameraBounds = {
-      left = reader:real(),
-      bottom = reader:real(),
-      right = reader:real(),
-      top = reader:real()
-    },
+    cameraBounds = reader:bounds('LBRT', 'R'),
 
     -- Repeat camera bounds counter-clockwise?
     reader:skip(16),
 
-    complements = {
-      left = reader:int(),
-      right = reader:int(),
-      bottom = reader:int(),
-      top = reader:int()
-    },
+    complements = reader:bounds('LRBT'),
 
     playable = {width = reader:int(), height = reader:int()}
   }

@@ -133,6 +133,38 @@ local function FileReader(file, bsize)
         local red, green, blue, alpha = unpack(data, 'BBBB')
         return {red = red, green = green, blue = blue, alpha = alpha}
       end
+    end,
+
+    bounds = function(self, format, type)
+      local data = self:read(4 * #format)
+      if data then
+        format = format:upper()
+        type = type and type:upper() or 'I'
+        local bounds = {}
+        local values
+
+        if type == 'I' or type == 'INTEGER' then
+          values = {unpack(data, string.rep('i4', #format))}
+        elseif type == 'R' or type == 'REAL' then
+          values = {unpack(data, string.rep('f', #format))}
+        end
+
+        for i = 1, #format do
+          local f = format:sub(i, i)
+          if f == 'L' then
+            bounds.left = values[i]
+          elseif f == 'T' then
+            bounds.top = values[i]
+          elseif f == 'R' then
+            bounds.right = values[i]
+          elseif f == 'B' then
+            bounds.bottom = values[i]
+          else
+            error('Unknown bound: ' .. f)
+          end
+        end
+        return bounds
+      end
     end
   }
 end
