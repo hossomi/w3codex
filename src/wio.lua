@@ -130,40 +130,42 @@ local function FileReader(file, bsize)
     color = function(self)
       local data = self:read(4)
       if data then
-        local red, green, blue, alpha = unpack(data, 'BBBB')
-        return {red = red, green = green, blue = blue, alpha = alpha}
+        local values = {unpack(data, 'BBBB')}
+        return {
+          red = values[1],
+          green = values[2],
+          blue = values[3],
+          alpha = values[4]
+        }
       end
     end,
 
     bounds = function(self, format, type)
+      return self:preformatted(format, type, {
+        L = 'left',
+        R = 'right',
+        T = 'top',
+        B = 'bottom',
+      })
+    end,
+
+    preformatted = function(self, format, type, mapping)
       local data = self:read(4 * #format)
       if data then
-        format = format:upper()
-        type = type and type:upper() or 'I'
-        local bounds = {}
-        local values
-
-        if type == 'I' or type == 'INTEGER' then
-          values = {unpack(data, string.rep('i4', #format))}
-        elseif type == 'R' or type == 'REAL' then
-          values = {unpack(data, string.rep('f', #format))}
-        end
+        local object = {}
+        local values = {unpack(data, string.rep(type, #format))}
 
         for i = 1, #format do
           local f = format:sub(i, i)
-          if f == 'L' then
-            bounds.left = values[i]
-          elseif f == 'T' then
-            bounds.top = values[i]
-          elseif f == 'R' then
-            bounds.right = values[i]
-          elseif f == 'B' then
-            bounds.bottom = values[i]
-          else
-            error('Unknown bound: ' .. f)
+          local m = mapping[f]
+          
+          if not m then
+            error('Unknown format: ' .. f)
           end
+
+          object[m] = values[i]
         end
-        return bounds
+        return object
       end
     end
   }

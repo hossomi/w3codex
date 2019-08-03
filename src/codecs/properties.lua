@@ -25,7 +25,7 @@ local function decode(path)
   }
 
   map.area = {
-    cameraBounds = reader:bounds('LBRT', 'R'),
+    cameraBounds = reader:bounds('LBRT', 'f'),
 
     -- Repeat camera bounds counter-clockwise?
     reader:skip(16),

@@ -155,21 +155,15 @@ describe('WIO', function()
 
     describe('bounds(format)', function()
 
-      it('should read with default', function()
+      it('should read with i4', function()
         local reader = wio.FileReader('test/wio/bounds-integer.bin')
-        assert.are.same(reader:bounds('LTRB'),
+        assert.are.same(reader:bounds('LTRB', 'i4'),
             {left = 1, top = 2, right = 3, bottom = 4})
       end)
       
-      it('should read with int()', function()
-        local reader = wio.FileReader('test/wio/bounds-integer.bin')
-        assert.are.same(reader:bounds('LTRB', 'i'),
-            {left = 1, top = 2, right = 3, bottom = 4})
-      end)
-      
-      it('should read with real()', function()
+      it('should read with f', function()
         local reader = wio.FileReader('test/wio/bounds-real.bin')
-        local bounds = reader:bounds('LTRB', 'r')
+        local bounds = reader:bounds('LTRB', 'f')
         assert.is_true(math.abs(bounds.left - 1.1) < 1E-6)
         assert.is_true(math.abs(bounds.top - 1.2) < 1E-6)
         assert.is_true(math.abs(bounds.right - 1.3) < 1E-6)
