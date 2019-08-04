@@ -5,6 +5,7 @@ local json = require 'rapidjson'
 
 local MAX_PLAYERS = 24
 local MAX_PLAYERS_MASK = 0x00FFFFFF
+local EMPTY_ID = '\0\0\0\0'
 
 local function min(a, b)
   if not a then
@@ -41,7 +42,9 @@ local function decode(path)
     recommendedPlayers = reader:string(),
 
     players = {},
-    forces = {}
+    forces = {},
+    randomGroups = {},
+    randomItems = {}
   }
 
   map.area = {
@@ -93,7 +96,7 @@ local function decode(path)
   }
 
   map.weather = {
-    global = util.filterNot(reader:bytes(4), '\0\0\0\0'),
+    global = util.filterNot(reader:bytes(4), EMPTY_ID),
     sound = util.filterNot(reader:string(), ''),
     light = util.filterNot(reader:bytes(1), '\0')
   }
@@ -198,7 +201,7 @@ local function decode(path)
   -- ====================
 
   for t = 1, reader:int() do
-    local players = reader:int() & MAX_PLAYERS_MAX
+    local players = reader:int() & MAX_PLAYERS_MASK
     local id = reader:bytes(4)
 
     flags.forEachMap(players, playerIndex, function(p)
@@ -206,6 +209,52 @@ local function decode(path)
     end)
   end
 
+  -- ====================
+  -- RANDOM UNIT TABLES
+  -- ====================
+
+  for g = 1, reader:int() do
+    local group = {
+      id = reader:int(),
+      name = reader:string(),
+      types = {},
+      sets = {}
+    }
+
+    for p = 1, reader:int() do
+      group.types[p] = reader:int()
+    end
+
+    for s = 1, reader:int() do
+      group.sets[s] = {chance = reader:int(), entries = {}}
+      for p = 1, #group.types do
+        group.sets[s].entries[p] = util.filterNot(reader:bytes(4), EMPTY_ID, '')
+      end
+    end
+
+    map.randomGroups[g] = group
+  end
+
+  -- ====================
+  -- RANDOM ITEM TABLES
+  -- ====================
+
+  for g = 1, reader:int() do
+    local group = {id = reader:int(), name = reader:string(), sets = {}}
+
+    for s = 1, reader:int() do
+      group.sets[s] = {}
+      for i = 1, reader:int() do
+        local chance = reader:int()
+        local id = util.filterNot(reader:bytes(4), EMPTY_ID, '')
+        group.sets[s][id] = chance
+      end
+    end
+
+    map.randomItems[g] = group
+  end
+
+  reader:close()
   return map
 end
 

@@ -26,9 +26,7 @@ return {
     return value
   end,
 
-  filterNot = function(value, except)
-    if (value ~= except) then
-      return value
-    end
+  filterNot = function(value, except, replace)
+    return value ~= except and value or replace
   end
 }

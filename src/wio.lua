@@ -32,7 +32,7 @@ local function FileReader(file, bsize)
     _fsize = size(file),
 
     _fremaining = function(self)
-      return self._fsize - self._file:seek() + 1
+      return self._fsize - self._file:seek() 
     end,
 
     readBytes = function(self, n)

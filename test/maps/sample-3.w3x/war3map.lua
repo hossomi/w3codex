@@ -1,5 +1,6 @@
 gg_trg_Melee_Initialization = nil
 gg_rg_000 = __jarray(0)
+gg_rg_001 = __jarray(0)
 function InitGlobals()
 end
 
@@ -15,12 +16,24 @@ function InitRandomGroups()
         gg_rg_000[2] = FourCC("ngme")
     elseif (curset == 1) then
         gg_rg_000[0] = FourCC("nbda")
-        gg_rg_000[1] = FourCC("ckng")
+        gg_rg_000[1] = -1
         gg_rg_000[2] = FourCC("ntav")
     else
         gg_rg_000[0] = -1
         gg_rg_000[1] = -1
         gg_rg_000[2] = -1
+    end
+    RandomDistReset()
+    RandomDistAddItem(0, 100)
+    curset = RandomDistChoose()
+    if (curset == 0) then
+        gg_rg_001[0] = ChooseRandomCreep(13)
+        gg_rg_001[1] = ChooseRandomNPBuilding()
+        gg_rg_001[2] = ChooseRandomItemEx(ITEM_TYPE_CHARGED, 8)
+    else
+        gg_rg_001[0] = -1
+        gg_rg_001[1] = -1
+        gg_rg_001[2] = -1
     end
 end
 
