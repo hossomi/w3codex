@@ -1,7 +1,7 @@
 local wio = require 'src.wio'
 local util = require 'src.util'
+require 'src.constants'
 
-local MAX_PLAYERS = 24
 local MAX_PLAYERS_MASK = 0x00FFFFFF
 local EMPTY_ID = '\0\0\0\0'
 
@@ -86,7 +86,7 @@ local function decode(path)
   reader:string()
 
   map.fog = {
-    type = reader:int(),
+    type = FOG_TYPES[reader:int()],
     min = reader:real(),
     max = reader:real(),
     density = reader:real(),
@@ -120,8 +120,8 @@ local function decode(path)
     }
 
     player.id = reader:int()
-    player.type = reader:int()
-    player.race = reader:int()
+    player.type = PLAYER_TYPES[reader:int()]
+    player.race = RACES[reader:int()]
     player.start.fixed = reader:int() == 1
     player.name = reader:string()
     player.start.x = reader:real()
@@ -130,8 +130,9 @@ local function decode(path)
     local low = reader:int()
     local high = reader:int()
     for a = 1, MAX_PLAYERS do
-      player.allyPriorities[a - 1] = (low & 0x1 ~= 0 and -1)
-                                         or (high & 0x1 ~= 0 and 1) or 0
+      player.allyPriorities[a - 1] = (low & 0x1 ~= 0 and PRIORITY_LOW)
+                                         or (high & 0x1 ~= 0 and PRIORITY_HIGH)
+                                         or PRIORITY_NONE
       low = low >> 1
       high = high >> 1
     end
@@ -161,9 +162,10 @@ local function decode(path)
     force.allied = util.flags.msb(settings & 0x3)
     force.shared = util.flags.msb(settings >> 3 & 0x7)
 
-    util.flags.forEachMap(reader:int() & MAX_PLAYERS_MASK, playerIndex, function(p)
-      map.players[p].force = f
-    end)
+    util.flags.forEachMap(reader:int() & MAX_PLAYERS_MASK, playerIndex,
+        function(p)
+          map.players[p].force = f
+        end)
 
     force.name = reader:string()
     map.forces[f] = force
@@ -220,7 +222,7 @@ local function decode(path)
     }
 
     for p = 1, reader:int() do
-      group.types[p] = reader:int()
+      group.types[p] = RANDOM_TYPES[reader:int() + 1]
     end
 
     for s = 1, reader:int() do
@@ -263,13 +265,8 @@ map = decode('test/maps/' .. arg[1] .. '.w3x/war3map.w3i')
 --   print(json.encode(map, {pretty = true}))
 -- end
 
-local json = require 'rapidjson'
 local yaml = require 'lyaml'
 
-local file = assert(io.open('out.json', 'w'))
-file:write(json.encode(map, {pretty = true}))
-file:close()
-
-file = assert(io.open('out.yml', 'w'))
+local file = assert(io.open(arg[1] .. '.yml', 'w'))
 file:write(yaml.dump({map}))
 file:close()
