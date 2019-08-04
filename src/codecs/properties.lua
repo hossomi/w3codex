@@ -1,8 +1,28 @@
 local wio = require 'src.wio'
 local util = require 'src.util'
+local flags = require 'src.flags'
 local json = require 'rapidjson'
 
 local MAX_PLAYERS = 24
+local MAX_PLAYERS_MASK = 0x00FFFFFF
+
+local function min(a, b)
+  if not a then
+    return b
+  elseif not b then
+    return a
+  end
+  return math.min(a, b)
+end
+
+local function max(a, b)
+  if not a then
+    return b
+  elseif not b then
+    return a
+  end
+  return math.max(a, b)
+end
 
 local function decode(path)
   local reader = wio.FileReader(path)
@@ -26,12 +46,9 @@ local function decode(path)
 
   map.area = {
     cameraBounds = reader:bounds('LBRT', 'f'),
-
     -- Repeat camera bounds counter-clockwise?
     reader:skip(16),
-
     complements = reader:bounds('LRBT', 'i4'),
-
     playable = reader:rect('WH', 'i4')
   }
 
@@ -40,21 +57,13 @@ local function decode(path)
   map.area.height = map.area.complements.top + map.area.complements.bottom
                         + map.area.playable.height
 
-  local flags = reader:int()
+  local mapFlags = reader:int()
   map.settings = {
-    isMeleeMap = flags & 0x0004 ~= 0,
-    isMaskedAreaVisible = flags & 0x0010 ~= 0,
-    hideMinimap = flags & 0x0001 ~= 0,
-    showWavesOnCliffShores = flags & 0x0800 ~= 0,
-    showWavesOnRollingShores = flags & 0x1000 ~= 0,
-    allyPriorities = {custom = flags & 0x0002 ~= 0},
-    forces = {
-      custom = flags & 0x0040 ~= 1,
-      fixedPlayerSettings = flags & 0x0020 ~= 1
-    },
-    techtree = {custom = flags & 0x0080 ~= 1},
-    abilities = {custom = flags & 0x0100 ~= 1},
-    upgrades = {custom = flags & 0x0200 ~= 1}
+    hideMinimap = mapFlags & 0x0001 ~= 0,
+    isMeleeMap = mapFlags & 0x0004 ~= 0,
+    isMaskedAreaVisible = mapFlags & 0x0010 ~= 0,
+    showWavesOnCliffShores = mapFlags & 0x0800 ~= 0,
+    showWavesOnRollingShores = mapFlags & 0x1000 ~= 0
   }
 
   map.tileset = reader:bytes(1)
@@ -94,13 +103,18 @@ local function decode(path)
   -- Unknown!
   reader:int()
 
+  -- ====================
+  -- PLAYERS
+  -- ====================
+
+  local playerId = {}
   local playerIndex = {}
-  local P = reader:int()
-  for p = 1, P do
+
+  for p = 1, reader:int() do
     local player = {
       start = {},
       allyPriorities = {},
-      techtree = {},
+      disabled = {},
       upgrades = {}
     }
 
@@ -115,100 +129,89 @@ local function decode(path)
     local low = reader:int()
     local high = reader:int()
     for a = 1, MAX_PLAYERS do
-      if low & 0x0001 == 1 then
-        player.allyPriorities[a] = -1
-      elseif high & 0x0001 == 1 then
-        player.allyPriorities[a] = 1
-      else
-        player.allyPriorities[a] = 0
-      end
-
+      player.allyPriorities[a - 1] = (low & 0x1 ~= 0 and -1)
+                                         or (high & 0x1 ~= 0 and 1) or 0
       low = low >> 1
       high = high >> 1
     end
 
-    playerIndex[p] = player.id + 1
     map.players[p] = player
+    playerId[p] = player.id
+    playerIndex[player.id] = p
   end
 
-  -- Now that we know all players, filter ally priorities
+  -- Remap ally priorities
   for p = 1, #map.players do
     local allyPriorities = {}
     for a = 1, #map.players do
-      allyPriorities[a] = map.players[p].allyPriorities[playerIndex[a]]
+      allyPriorities[a] = map.players[p].allyPriorities[playerId[a]]
     end
     map.players[p].allyPriorities = allyPriorities
   end
 
+  -- ====================
+  -- FORCES
+  -- ====================
+
   for f = 1, reader:int() do
     local force = {}
 
-    local flags = reader:int()
-    force.allied = flags & 0x0001 ~= 0
-    force.alliedVictory = flags & 0x0002 ~= 0
-    force.sharedVision = flags & 0x0008 ~= 0
-    force.sharedUnitControl = flags & 0x0010 ~= 0
-    force.shareAdvancedUnitControl = flags & 0x0020 ~= 0
+    local settings = reader:int()
+    force.allied = flags.msb(settings & 0x3)
+    force.shared = flags.msb(settings >> 3 & 0x7)
 
-    local players = reader:int()
-    for p = 1, MAX_PLAYERS do
-      if map.players[p] and players & 0x0001 == 1 then
-        map.players[p].force = f
-      end
-      players = players >> 1
-    end
+    flags.forEachMap(reader:int() & MAX_PLAYERS_MASK, playerIndex, function(p)
+      map.players[p].force = f
+    end)
 
     force.name = reader:string()
     map.forces[f] = force
   end
 
+  -- ====================
+  -- UPGRADES
+  -- ====================
+
   for u = 1, reader:int() do
-    local players = reader:int()
+    local players = reader:int() & MAX_PLAYERS_MASK
     local id = reader:bytes(4)
     local level = reader:int()
     local availability = reader:int()
 
-    for p = 1, MAX_PLAYERS do
-      if map.players[p] and players & 0x0001 == 1 then
-        local upgrade = map.players[p].upgrades[id]
-        if not upgrade then
-          upgrade = {}
-          map.players[p].upgrades[id] = upgrade
-        end
-
-        if availability == 0 then
-          upgrade.available = upgrade.available
-                                  and math.min(upgrade.available, level) or level
-          upgrade.levels =
-              upgrade.levels and math.max(upgrade.levels, level + 1) or level + 1
-        elseif availability == 2 then
-          upgrade.researched = upgrade.researched
-                                   and math.max(upgrade.researched, level + 1)
-                                   or level + 1
-        end
+    flags.forEachMap(players, playerIndex, function(p)
+      if not map.players[p].upgrades[id] then
+        map.players[p].upgrades[id] = {}
       end
+      local upgrade = map.players[p].upgrades[id]
 
-      players = players >> 1
-    end
-
+      if availability == 0 then
+        upgrade.available = min(upgrade.available, level)
+        upgrade.levels = max(upgrade.levels, level + 1)
+      elseif availability == 2 then
+        upgrade.researched = max(upgrade.researched, level + 1)
+      end
+    end)
   end
 
+  -- ====================
+  -- DISABLED TECHTREE
+  -- ====================
+
   for t = 1, reader:int() do
-    local players = reader:int()
+    local players = reader:int() & MAX_PLAYERS_MAX
     local id = reader:bytes(4)
 
-    for p = 1, MAX_PLAYERS do
-      if map.players[p] and players & 0x0001 == 1 then
-        map.players[p].techtree[id] = false
-        players = players >> 1
-      end
-    end
+    flags.forEachMap(players, playerIndex, function(p)
+      map.players[p].disabled[id] = true
+    end)
   end
 
   return map
 end
 
-map = decode('test/maps/sample-2.w3x/war3map.w3i')
--- writer = wio.FileWriter('test/json/map.json')
-print(json.encode(map, {pretty = true}))
--- writer:close()
+map = decode('test/maps/' .. arg[1] .. '.w3x/war3map.w3i')
+if arg[2] then
+  print(json.encode(map[arg[2]], {pretty = true}))
+else
+  print(json.encode(map, {pretty = true}))
+end
