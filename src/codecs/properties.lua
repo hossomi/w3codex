@@ -1,7 +1,5 @@
 local wio = require 'src.wio'
 local util = require 'src.util'
-local flags = require 'src.flags'
-local json = require 'rapidjson'
 
 local MAX_PLAYERS = 24
 local MAX_PLAYERS_MASK = 0x00FFFFFF
@@ -60,13 +58,13 @@ local function decode(path)
   map.area.height = map.area.complements.top + map.area.complements.bottom
                         + map.area.playable.height
 
-  local mapFlags = reader:int()
+  local flags = reader:int()
   map.settings = {
-    hideMinimap = mapFlags & 0x0001 ~= 0,
-    isMeleeMap = mapFlags & 0x0004 ~= 0,
-    isMaskedAreaVisible = mapFlags & 0x0010 ~= 0,
-    showWavesOnCliffShores = mapFlags & 0x0800 ~= 0,
-    showWavesOnRollingShores = mapFlags & 0x1000 ~= 0
+    hideMinimap = flags & 0x0001 ~= 0,
+    isMeleeMap = flags & 0x0004 ~= 0,
+    isMaskedAreaVisible = flags & 0x0010 ~= 0,
+    showWavesOnCliffShores = flags & 0x0800 ~= 0,
+    showWavesOnRollingShores = flags & 0x1000 ~= 0
   }
 
   map.tileset = reader:bytes(1)
@@ -160,10 +158,10 @@ local function decode(path)
     local force = {}
 
     local settings = reader:int()
-    force.allied = flags.msb(settings & 0x3)
-    force.shared = flags.msb(settings >> 3 & 0x7)
+    force.allied = util.flags.msb(settings & 0x3)
+    force.shared = util.flags.msb(settings >> 3 & 0x7)
 
-    flags.forEachMap(reader:int() & MAX_PLAYERS_MASK, playerIndex, function(p)
+    util.flags.forEachMap(reader:int() & MAX_PLAYERS_MASK, playerIndex, function(p)
       map.players[p].force = f
     end)
 
@@ -181,7 +179,7 @@ local function decode(path)
     local level = reader:int()
     local availability = reader:int()
 
-    flags.forEachMap(players, playerIndex, function(p)
+    util.flags.forEachMap(players, playerIndex, function(p)
       if not map.players[p].upgrades[id] then
         map.players[p].upgrades[id] = {}
       end
@@ -204,7 +202,7 @@ local function decode(path)
     local players = reader:int() & MAX_PLAYERS_MASK
     local id = reader:bytes(4)
 
-    flags.forEachMap(players, playerIndex, function(p)
+    util.flags.forEachMap(players, playerIndex, function(p)
       map.players[p].disabled[id] = true
     end)
   end
@@ -259,8 +257,19 @@ local function decode(path)
 end
 
 map = decode('test/maps/' .. arg[1] .. '.w3x/war3map.w3i')
-if arg[2] then
-  print(json.encode(map[arg[2]], {pretty = true}))
-else
-  print(json.encode(map, {pretty = true}))
-end
+-- if arg[2] then
+--   print(json.encode(map[arg[2]], {pretty = true}))
+-- else
+--   print(json.encode(map, {pretty = true}))
+-- end
+
+local json = require 'rapidjson'
+local yaml = require 'lyaml'
+
+local file = assert(io.open('out.json', 'w'))
+file:write(json.encode(map, {pretty = true}))
+file:close()
+
+file = assert(io.open('out.yml', 'w'))
+file:write(yaml.dump({map}))
+file:close()
