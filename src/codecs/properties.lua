@@ -261,79 +261,59 @@ end
 
 local function encode(map, path)
   local writer = wio.FileWriter(path)
-  writer:int(28)
-  writer:int(map.version)
-  writer:int(map.editorVersion)
+
+  writer:int(28, map.version, map.editorVersion)
   writer:bytes(string.rep('\0', 16))
-  writer:string(map.name)
-  writer:string(map.author)
-  writer:string(map.description)
-  writer:string(map.recommendedPlayers)
+  writer:string(map.name, map.author, map.description, map.recommendedPlayers)
 
-  writer:close()
+  writer:real(map.area.cameraBounds.left, map.area.cameraBounds.bottom,
+      map.area.cameraBounds.right, map.area.cameraBounds.top)
 
-  -- map.area = {
-  --   cameraBounds = reader:bounds('LBRT', 'f'),
-  --   -- Repeat camera bounds counter-clockwise?
-  --   reader:skip(16),
-  --   complements = reader:bounds('LRBT', 'i4'),
-  --   playable = reader:rect('WH', 'i4')
-  -- }
+  writer:real(map.area.cameraBounds.left, map.area.cameraBounds.top,
+      map.area.cameraBounds.right, map.area.cameraBounds.bottom)
 
-  -- map.area.width = map.area.complements.left + map.area.complements.right
-  --                      + map.area.playable.width
-  -- map.area.height = map.area.complements.top + map.area.complements.bottom
-  --                       + map.area.playable.height
+  writer:int(map.area.complements.left, map.area.complements.right,
+      map.area.complements.bottom, map.area.complements.top)
 
-  -- local flags = reader:int()
-  -- map.settings = {
-  --   hideMinimap = flags & 0x0001 ~= 0,
-  --   isMeleeMap = flags & 0x0004 ~= 0,
-  --   isMaskedAreaVisible = flags & 0x0010 ~= 0,
-  --   showWavesOnCliffShores = flags & 0x0800 ~= 0,
-  --   showWavesOnRollingShores = flags & 0x1000 ~= 0
-  -- }
+  writer:int((map.settings.hideMinimap and 0x0001 or 0)
+                 + (map.settings.isMeleeMap and 0x0004 or 0)
+                 + (map.settings.isMaskedAreaVisible and 0x0010 or 0)
+                 + (map.settings.showWavesOnCliffShores and 0x0800 or 0)
+                 + (map.settings.showWavesOnRollingShores and 0x1000 or 0))
 
-  -- map.tileset = reader:bytes(1)
+  writer:bytes(map.tileset)
 
-  -- map.loadingScreen = {
-  --   preset = util.filterNot(reader:int(), -1),
-  --   custom = util.filterNot(reader:string(), ''),
-  --   text = reader:string(),
-  --   title = reader:string(),
-  --   subtitle = reader:string()
-  -- }
+  writer:int(map.loadingScreen.preset or -1)
+  writer:string(map.loadingScreen.custom or '')
+  writer:string(map.loadingScreen.text, map.loadingScreen.title,
+      map.loadingScreen.subtitle)
 
-  -- map.dataset = reader:int()
+  writer:int(map.dataset)
+  writer:string('', '', '', '')
 
-  -- -- Unknown!
-  -- reader:string()
-  -- reader:string()
-  -- reader:string()
-  -- reader:string()
+  writer:int(FOG_TYPES[map.fog.type])
+  writer:real(map.fog.min, map.fog.max, map.fog.density)
+  writer:color(map.fog.color)
 
-  -- map.fog = {
-  --   type = FOG_TYPES[reader:int()],
-  --   min = reader:real(),
-  --   max = reader:real(),
-  --   density = reader:real(),
-  --   color = reader:color()
-  -- }
+  writer:bytes(map.weather.global or EMPTY_ID)
+  writer:string(map.weather.sound or '')
+  writer:bytes(map.weather.light or '\0')
 
-  -- map.weather = {
-  --   global = util.filterNot(reader:bytes(4), EMPTY_ID),
-  --   sound = util.filterNot(reader:string(), ''),
-  --   light = util.filterNot(reader:bytes(1), '\0')
-  -- }
-
-  -- map.water = {color = reader:color()}
-
-  -- -- Unknown!
-  -- reader:int()
+  writer:color(map.water.color)
+  writer:int(0)
 
   -- -- ====================
   -- -- PLAYERS
   -- -- ====================
+
+  writer:int(#map.players)
+  for p = 1, #map.players do
+    local player = map.players[p]
+    writer:int(player.id, PLAYER_TYPES[player.type], RACES[player.race],
+        player.start.fixed and 1 or 0)
+    writer:string(player.name)
+    writer:real(player.start.x, player.start.y)
+  end
 
   -- local playerId = {}
   -- local playerIndex = {}
@@ -483,6 +463,8 @@ local function encode(map, path)
 
   -- reader:close()
   -- return map
+
+  writer:close()
 end
 
 map = decode('test/maps/' .. arg[1] .. '.w3x/war3map.w3i')

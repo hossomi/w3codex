@@ -41,7 +41,7 @@ return {
         flags = flags >> 1
       end
     end,
-  
+
     msb = function(data)
       local msb = 0
       while data > 0 do
@@ -49,6 +49,18 @@ return {
         data = data >> 1
       end
       return msb
+    end,
+
+    pack = function(...)
+      local flags = {...}
+      local packed = 0
+      for i = #flags, 1, -1 do
+        packed = packed << 1
+        if flags[i] then
+          packed = packed + 1
+        end
+      end
+      return packed
     end
   }
 }
