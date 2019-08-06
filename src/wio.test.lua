@@ -94,6 +94,13 @@ describe('WIO', function()
         assert.are.equals(reader:string(), 'MARCELO HOSSOMI')
       end)
 
+      it('should read multiple', function()
+        local reader = wio.FileReader('test/wio/string-two.bin')
+        local a, b = reader:string(2)
+        assert.are.equals(a, 'MARCELO YUKIO')
+        assert.are.equals(b, 'BRESSAN HOSSOMI')
+      end)
+
       it('should return nil if no terminator', function()
         local reader = wio.FileReader('test/wio/bytes.bin')
         assert.is_nil(reader:string())
@@ -105,6 +112,13 @@ describe('WIO', function()
       it('should read little endian', function()
         local reader = wio.FileReader('test/wio/integer.bin')
         assert.are.equals(reader:int(), 1)
+      end)
+
+      it('should read multiple', function()
+        local reader = wio.FileReader('test/wio/bounds-integer.bin')
+        local a, b = reader:int(2)
+        assert.are.equals(a, 1)
+        assert.are.equals(b, 2)
       end)
 
       it('should return nil if no more data', function()
@@ -120,6 +134,13 @@ describe('WIO', function()
         assert.are.equals(reader:short(), 1)
       end)
 
+      it('should read multiple', function()
+        local reader = wio.FileReader('test/wio/integer.bin')
+        local a, b = reader:short(2)
+        assert.are.equals(a, 1)
+        assert.are.equals(b, 0)
+      end)
+
       it('should return nil if no more data', function()
         local reader = wio.FileReader('test/wio/empty.bin')
         assert.is_nil(reader:short())
@@ -131,6 +152,13 @@ describe('WIO', function()
       it('should read little endian', function()
         local reader = wio.FileReader('test/wio/real.bin')
         assert.is_true(math.abs(reader:real() - 1.23) < 1E-6)
+      end)
+
+      it('should read multiple', function()
+        local reader = wio.FileReader('test/wio/bounds-real.bin')
+        local a, b = reader:real(2)
+        assert.is_true(math.abs(a - 1.1) < 1E-6)
+        assert.is_true(math.abs(b - 1.2) < 1E-6)
       end)
 
       it('should return nil if no more data', function()
@@ -160,7 +188,7 @@ describe('WIO', function()
         assert.are.same(reader:bounds('LTRB', 'i4'),
             {left = 1, top = 2, right = 3, bottom = 4})
       end)
-      
+
       it('should read with f', function()
         local reader = wio.FileReader('test/wio/bounds-real.bin')
         local bounds = reader:bounds('LTRB', 'f')
@@ -169,7 +197,7 @@ describe('WIO', function()
         assert.is_true(math.abs(bounds.right - 1.3) < 1E-6)
         assert.is_true(math.abs(bounds.bottom - 1.4) < 1E-6)
       end)
-      
+
       it('should return nil if no more data', function()
         local reader = wio.FileReader('test/wio/integer.bin')
         assert.is_nil(reader:bounds('LTRB', 'i4'))
@@ -180,17 +208,16 @@ describe('WIO', function()
 
       it('should read with i4', function()
         local reader = wio.FileReader('test/wio/bounds-integer.bin')
-        assert.are.same(reader:rect('WH', 'i4'),
-            {width = 1, height = 2})
+        assert.are.same(reader:rect('WH', 'i4'), {width = 1, height = 2})
       end)
-      
+
       it('should read with f', function()
         local reader = wio.FileReader('test/wio/bounds-real.bin')
         local rect = reader:rect('WH', 'f')
         assert.is_true(math.abs(rect.width - 1.1) < 1E-6)
         assert.is_true(math.abs(rect.height - 1.2) < 1E-6)
       end)
-      
+
       it('should return nil if no more data', function()
         local reader = wio.FileReader('test/wio/integer.bin')
         assert.is_nil(reader:rect('WH', 'i4'))
@@ -229,24 +256,56 @@ describe('WIO', function()
       assert.data('MARCELO HOSSOMI')
     end)
 
-    it('should write string with terminator', function()
-      writer:string('MARCELO HOSSOMI')
-      assert.data('MARCELO HOSSOMI' .. '\0')
+    describe('string()', function()
+
+      it('should write string with terminator', function()
+        writer:string('MARCELO HOSSOMI')
+        assert.data('MARCELO HOSSOMI\0')
+      end)
+
+      it('should write multiple', function()
+        writer:string('MARCELO YUKIO', 'BRESSAN HOSSOMI')
+        assert.data('MARCELO YUKIO\0BRESSAN HOSSOMI\0')
+      end)
     end)
 
-    it('should write integer little endian', function()
-      writer:int(1)
-      assert.data(util.hexToBin('01000000'))
+    describe('int()', function()
+
+      it('should write integer little endian', function()
+        writer:int(1)
+        assert.data(util.hexToBin('01000000'))
+      end)
+
+      it('should write multiple', function()
+        writer:int(1, 2)
+        assert.data(util.hexToBin('0100000002000000'))
+      end)
     end)
 
-    it('should write short little endian', function()
-      writer:short(1)
-      assert.data(util.hexToBin('0100'))
+    describe('short()', function()
+
+      it('should write short little endian', function()
+        writer:short(1)
+        assert.data(util.hexToBin('0100'))
+      end)
+
+      it('should write multiple', function()
+        writer:short(1, 2)
+        assert.data(util.hexToBin('01000200'))
+      end)
     end)
 
-    it('should write real little endian', function()
-      writer:real(1.23)
-      assert.data(util.hexToBin('A4709D3F'))
+    describe('real()', function()
+
+      it('should write real little endian', function()
+        writer:real(1.23)
+        assert.data(util.hexToBin('A4709D3F'))
+      end)
+
+      it('should write multiple', function()
+        writer:real(1.23, 1.23)
+        assert.data(util.hexToBin('A4709D3FA4709D3F'))
+      end)
     end)
 
     it('should write color', function()

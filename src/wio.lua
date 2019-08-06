@@ -1,12 +1,14 @@
-local function unpack(data, format)
+local function multiunpack(format, n, data)
   if data then
+    format = '<' .. string.rep(format, n)
     return format:unpack(data)
   end
 end
 
-local function pack(data, format)
-  if data then
-    return format:pack(data)
+local function multipack(format, ...)
+  if ... then
+    format = '<' .. string.rep(format, #{...})
+    return format:pack(...)
   end
 end
 
@@ -32,7 +34,7 @@ local function FileReader(file, bsize)
     _fsize = size(file),
 
     _fremaining = function(self)
-      return self._fsize - self._file:seek() 
+      return self._fsize - self._file:seek()
     end,
 
     readBytes = function(self, n)
@@ -111,26 +113,37 @@ local function FileReader(file, bsize)
       return self:read(n)
     end,
 
-    string = function(self)
-      return self:read('\0')
+    string = function(self, n)
+      if not n or n == 1 then
+        return self:read('\0')
+      end
+
+      results = {}
+      for i = 1, n do
+        results[#results + 1] = self:read('\0')
+      end
+      return table.unpack(results)
     end,
 
-    int = function(self)
-      return (unpack(self:read(4), '<i4'))
+    int = function(self, n)
+      n = n or 1
+      return multiunpack('i4', n, self:read(4 * n))
     end,
 
-    short = function(self)
-      return (unpack(self:read(2), '<i2'))
+    short = function(self, n)
+      n = n or 1
+      return multiunpack('i2', n, self:read(2 * n))
     end,
 
-    real = function(self)
-      return (unpack(self:read(4), '<f'))
+    real = function(self, n)
+      n = n or 1
+      return multiunpack('f', n, self:read(4 * n))
     end,
 
     color = function(self)
       local data = self:read(4)
       if data then
-        local values = {unpack(data, 'BBBB')}
+        local values = {string.unpack('BBBB', data)}
         return {
           red = values[1],
           green = values[2],
@@ -145,27 +158,24 @@ local function FileReader(file, bsize)
         L = 'left',
         R = 'right',
         T = 'top',
-        B = 'bottom',
+        B = 'bottom'
       })
     end,
 
     rect = function(self, format, type)
-      return self:preformatted(format, type, {
-        W = 'width',
-        H = 'height'
-      })
+      return self:preformatted(format, type, {W = 'width', H = 'height'})
     end,
 
     preformatted = function(self, format, type, mapping)
       local data = self:read(4 * #format)
       if data then
         local object = {}
-        local values = {unpack(data, string.rep(type, #format))}
+        local values = {string.unpack(string.rep(type, #format), data)}
 
         for i = 1, #format do
           local f = format:sub(i, i)
           local m = mapping[f]
-          
+
           if not m then
             error('Unknown format: ' .. f)
           end
@@ -203,20 +213,23 @@ local function FileWriter(file, bsize)
       self:write(data)
     end,
 
-    string = function(self, data)
-      self:write(data .. '\0')
+    string = function(self, ...)
+      data = {...}
+      for i = 1, #data do
+        self:write(data[i] .. '\0')
+      end
     end,
 
-    int = function(self, data)
-      self:write((pack(data, '<i4')))
+    int = function(self, ...)
+      self:write(multipack('i4', ...))
     end,
 
-    short = function(self, data)
-      self:write((pack(data, '<i2')))
+    short = function(self, ...)
+      self:write(multipack('i2', ...))
     end,
 
-    real = function(self, data)
-      self:write((pack(data, '<f')))
+    real = function(self, ...)
+      self:write(multipack('f', ...))
     end,
 
     color = function(self, data)
