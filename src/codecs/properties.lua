@@ -113,12 +113,7 @@ local function decode(path)
   local playerIndex = {}
 
   for p = 1, reader:int() do
-    local player = {
-      start = {},
-      allyPriorities = {},
-      disabled = {},
-      upgrades = {}
-    }
+    local player = {start = {}, allyPriorities = {}, techtree = {}}
 
     player.id = reader:int()
     player.type = PLAYER_TYPES[reader:int()]
@@ -183,10 +178,10 @@ local function decode(path)
     local availability = reader:int()
 
     util.flags.forEachMap(players, playerIndex, function(p)
-      if not map.players[p].upgrades[id] then
-        map.players[p].upgrades[id] = {}
+      if not map.players[p].techtree[id] then
+        map.players[p].techtree[id] = {}
       end
-      local upgrade = map.players[p].upgrades[id]
+      local upgrade = map.players[p].techtree[id]
 
       if availability == 0 then
         upgrade.available = min(upgrade.available, level)
@@ -206,7 +201,7 @@ local function decode(path)
     local id = reader:bytes(4)
 
     util.flags.forEachMap(players, playerIndex, function(p)
-      map.players[p].disabled[id] = true
+      map.players[p].techtree[id] = false
     end)
   end
 
@@ -227,9 +222,9 @@ local function decode(path)
     end
 
     for s = 1, reader:int() do
-      group.sets[s] = {chance = reader:int(), entries = {}}
+      group.sets[s] = {chance = reader:int(), objects = {}}
       for p = 1, #group.types do
-        group.sets[s].entries[p] = util.filterNot(reader:bytes(4), EMPTY_ID, '')
+        group.sets[s].objects[p] = util.filterNot(reader:bytes(4), EMPTY_ID, '')
       end
     end
 
@@ -246,9 +241,10 @@ local function decode(path)
     for s = 1, reader:int() do
       group.sets[s] = {}
       for i = 1, reader:int() do
-        local chance = reader:int()
-        local id = util.filterNot(reader:bytes(4), EMPTY_ID, '')
-        group.sets[s][id] = chance
+        group.sets[s][i] = {
+          chance = reader:int(),
+          item = util.filterNot(reader:bytes(4), EMPTY_ID, '')
+        }
       end
     end
 
@@ -273,7 +269,8 @@ local function encode(map, path)
       map.area.cameraBounds.right, map.area.cameraBounds.bottom)
 
   writer:int(map.area.complements.left, map.area.complements.right,
-      map.area.complements.bottom, map.area.complements.top)
+      map.area.complements.bottom, map.area.complements.top,
+      map.area.playable.width, map.area.playable.height)
 
   writer:int((map.settings.hideMinimap and 0x0001 or 0)
                  + (map.settings.isMeleeMap and 0x0004 or 0)
@@ -302,9 +299,9 @@ local function encode(map, path)
   writer:color(map.water.color)
   writer:int(0)
 
-  -- -- ====================
-  -- -- PLAYERS
-  -- -- ====================
+  -- ====================
+  -- PLAYERS
+  -- ====================
 
   writer:int(#map.players)
   for p = 1, #map.players do
@@ -313,156 +310,141 @@ local function encode(map, path)
         player.start.fixed and 1 or 0)
     writer:string(player.name)
     writer:real(player.start.x, player.start.y)
+
+    local low = 0x00000000
+    local high = 0x00000000
+    for a = 1, #player.allyPriorities do
+      if player.allyPriorities[a] < 0 then
+        low = low + math.pow(2, map.players[a].id)
+      elseif player.allyPriorities[a] > 0 then
+        high = high + math.pow(2, map.players[a].id)
+      end
+    end
+
+    writer:int(low, high)
   end
 
-  -- local playerId = {}
-  -- local playerIndex = {}
+  -- ====================
+  -- FORCES
+  -- ====================
 
-  -- for p = 1, reader:int() do
-  --   local player = {
-  --     start = {},
-  --     allyPriorities = {},
-  --     disabled = {},
-  --     upgrades = {}
-  --   }
+  writer:int(#map.forces)
+  for f = 1, #map.forces do
+    local force = map.forces[f]
+    writer:int((force.allied > 0 and 0x01 or 0)
+                   + (force.allied > 1 and 0x02 or 0)
+                   + (force.shared > 0 and 0x08 or 0)
+                   + (force.shared > 1 and 0x10 or 0)
+                   + (force.shared > 2 and 0x20 or 0))
 
-  --   player.id = reader:int()
-  --   player.type = PLAYER_TYPES[reader:int()]
-  --   player.race = RACES[reader:int()]
-  --   player.start.fixed = reader:int() == 1
-  --   player.name = reader:string()
-  --   player.start.x = reader:real()
-  --   player.start.y = reader:real()
+    local players = 0x00000000
+    for p = #map.players, 1, -1 do
+      if map.players[p].force == f then
+        players = players + 1
+      end
+      players = players << 1
+    end
+    writer:int(players)
+    writer:string(force.name)
+  end
 
-  --   local low = reader:int()
-  --   local high = reader:int()
-  --   for a = 1, MAX_PLAYERS do
-  --     player.allyPriorities[a - 1] = (low & 0x1 ~= 0 and PRIORITY_LOW)
-  --                                        or (high & 0x1 ~= 0 and PRIORITY_HIGH)
-  --                                        or PRIORITY_NONE
-  --     low = low >> 1
-  --     high = high >> 1
-  --   end
+  -- ====================
+  -- UPGRADES
+  -- ====================
 
-  --   map.players[p] = player
-  --   playerId[p] = player.id
-  --   playerIndex[player.id] = p
-  -- end
+  local upgrades = {}
+  local techtree = {}
 
-  -- -- Remap ally priorities
-  -- for p = 1, #map.players do
-  --   local allyPriorities = {}
-  --   for a = 1, #map.players do
-  --     allyPriorities[a] = map.players[p].allyPriorities[playerId[a]]
-  --   end
-  --   map.players[p].allyPriorities = allyPriorities
-  -- end
+  local pmask = 0x00000001
+  for p = 1, #map.players do
+    local player = map.players[p]
 
-  -- -- ====================
-  -- -- FORCES
-  -- -- ====================
+    for id, u in pairs(player.techtree) do
+      if type(u) == 'boolean' then
+        techtree[#techtree + 1] = {player = pmask, id = id}
+      else
+        if u.researched then
+          for l = 0, u.researched - 1 do
+            upgrades[#upgrades + 1] = {
+              player = pmask,
+              id = id,
+              level = l,
+              availability = 2
+            }
+          end
+        end
+        if u.available then
+          for l = u.available, u.levels - 1 do
+            upgrades[#upgrades + 1] = {
+              player = pmask,
+              id = id,
+              level = l,
+              availability = 0
+            }
+          end
+        end
+      end
+    end
 
-  -- for f = 1, reader:int() do
-  --   local force = {}
+    pmask = pmask << 1
+  end
 
-  --   local settings = reader:int()
-  --   force.allied = util.flags.msb(settings & 0x3)
-  --   force.shared = util.flags.msb(settings >> 3 & 0x7)
+  writer:int(#upgrades)
+  for u = 1, #upgrades do
+    local upgrade = upgrades[u]
+    writer:int(upgrade.player)
+    writer:bytes(upgrade.id)
+    writer:int(upgrade.level, upgrade.availability)
+  end
 
-  --   util.flags.forEachMap(reader:int() & MAX_PLAYERS_MASK, playerIndex,
-  --       function(p)
-  --         map.players[p].force = f
-  --       end)
+  writer:int(#techtree)
+  for t = 1, #techtree do
+    local tech = techtree[t]
+    writer:int(tech.player)
+    writer:bytes(tech.id)
+  end
 
-  --   force.name = reader:string()
-  --   map.forces[f] = force
-  -- end
+  -- ====================
+  -- RANDOM UNIT TABLES
+  -- ====================
 
-  -- -- ====================
-  -- -- UPGRADES
-  -- -- ====================
+  writer:int(#map.randomGroups)
+  for g = 1, #map.randomGroups do
+    local group = map.randomGroups[g]
+    writer:int(group.id)
+    writer:string(group.name)
 
-  -- for u = 1, reader:int() do
-  --   local players = reader:int() & MAX_PLAYERS_MASK
-  --   local id = reader:bytes(4)
-  --   local level = reader:int()
-  --   local availability = reader:int()
+    writer:int(#group.types)
+    for t = 1, #group.types do
+      writer:int(RANDOM_TYPES[group.types[t]] - 1)
+    end
 
-  --   util.flags.forEachMap(players, playerIndex, function(p)
-  --     if not map.players[p].upgrades[id] then
-  --       map.players[p].upgrades[id] = {}
-  --     end
-  --     local upgrade = map.players[p].upgrades[id]
+    writer:int(#group.sets)
+    for s = 1, #group.sets do
+      writer:int(group.sets[s].chance)
+      for t = 1, #group.types do
+        writer:bytes(util.filterNot(group.sets[s].objects[t], '', EMPTY_ID))
+      end
+    end
+  end
 
-  --     if availability == 0 then
-  --       upgrade.available = min(upgrade.available, level)
-  --       upgrade.levels = max(upgrade.levels, level + 1)
-  --     elseif availability == 2 then
-  --       upgrade.researched = max(upgrade.researched, level + 1)
-  --     end
-  --   end)
-  -- end
+  -- ====================
+  -- RANDOM ITEM TABLES
+  -- ====================
 
-  -- -- ====================
-  -- -- DISABLED TECHTREE
-  -- -- ====================
-
-  -- for t = 1, reader:int() do
-  --   local players = reader:int() & MAX_PLAYERS_MASK
-  --   local id = reader:bytes(4)
-
-  --   util.flags.forEachMap(players, playerIndex, function(p)
-  --     map.players[p].disabled[id] = true
-  --   end)
-  -- end
-
-  -- -- ====================
-  -- -- RANDOM UNIT TABLES
-  -- -- ====================
-
-  -- for g = 1, reader:int() do
-  --   local group = {
-  --     id = reader:int(),
-  --     name = reader:string(),
-  --     types = {},
-  --     sets = {}
-  --   }
-
-  --   for p = 1, reader:int() do
-  --     group.types[p] = RANDOM_TYPES[reader:int() + 1]
-  --   end
-
-  --   for s = 1, reader:int() do
-  --     group.sets[s] = {chance = reader:int(), entries = {}}
-  --     for p = 1, #group.types do
-  --       group.sets[s].entries[p] = util.filterNot(reader:bytes(4), EMPTY_ID, '')
-  --     end
-  --   end
-
-  --   map.randomGroups[g] = group
-  -- end
-
-  -- -- ====================
-  -- -- RANDOM ITEM TABLES
-  -- -- ====================
-
-  -- for g = 1, reader:int() do
-  --   local group = {id = reader:int(), name = reader:string(), sets = {}}
-
-  --   for s = 1, reader:int() do
-  --     group.sets[s] = {}
-  --     for i = 1, reader:int() do
-  --       local chance = reader:int()
-  --       local id = util.filterNot(reader:bytes(4), EMPTY_ID, '')
-  --       group.sets[s][id] = chance
-  --     end
-  --   end
-
-  --   map.randomItems[g] = group
-  -- end
-
-  -- reader:close()
-  -- return map
+  writer:int(#map.randomItems)
+  for i = 1, #map.randomItems do
+    local group = map.randomItems[i]
+    writer:int(group.id)
+    writer:string(group.name)
+    writer:int(#group.sets)
+    for s = 1, #group.sets do
+      for i = 1, #group.sets[s] do
+        writer:int(group.sets[s][i].chance)
+        writer:bytes(util.filterNot(group.sets[s][i].item, '', EMPTY_ID))
+      end
+    end
+  end
 
   writer:close()
 end
@@ -475,8 +457,8 @@ map = decode('test/maps/' .. arg[1] .. '.w3x/war3map.w3i')
 -- end
 
 local yaml = require 'lyaml'
-local file = assert(io.open(arg[1] .. '.yml', 'w'))
+local file = assert(io.open('out/' .. arg[1] .. '.yml', 'w'))
 file:write(yaml.dump({map}))
 file:close()
 
-encode(map, arg[1] .. '.w3i')
+encode(map, 'out/' .. arg[1] .. '.w3i')
