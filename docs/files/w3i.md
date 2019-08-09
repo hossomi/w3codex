@@ -5,55 +5,37 @@
 This file holds many properties of the map itself, as well as general player settings.
 Most of its information is available in the World Editor under the _Scenario_ menu.
 
-- [_war3map.w3i_](#war3mapw3i)
-    - [`MapArea`](#maparea)
-    - [`MapSettings`](#mapsettings)
-    - [`MapLoadingScreen`](#maploadingscreen)
-    - [`MapFog`](#mapfog)
-    - [`MapWeather`](#mapweather)
-    - [`MapWater`](#mapwater)
-    - [`Player`](#player)
-    - [`Force`](#force)
-    - [`UpgradeAvailability`](#upgradeavailability)
-    - [`TechAvailability`](#techavailability)
-    - [`RandomGroupTable`](#randomgrouptable)
-    - [`RandomGroupEntry`](#randomgroupentry)
-    - [`RandomItemTable`](#randomitemtable)
-    - [`RandomItemSet`](#randomitemset)
-    - [`RandomItemEntry`](#randomitementry)
-  
-
-| Type                                     | Field                                                                 |
-| ---------------------------------------- | --------------------------------------------------------------------- |
-| `int`                                    | Format version. Always `28` as of patch 1.31.1.                       |
-| `int`                                    | Map version. Equivalent to the number of times the map was saved.     |
-| `int`                                    | Editor version that saved this map. Always `6072` as of patch 1.31.1. |
-| `string`                                 | Map name.                                                             |
-| `string`                                 | Map author.                                                           |
-| `string`                                 | Map description.                                                      |
-| `string`                                 | Map recommended players.                                              |
-| [`MapArea`](#map-area)                   | Map area and camera bounds.                                           |
-| [`MapSettings`](#map-settings)           | Map flags.                                                            |
-| `char`                                   | Map base tileset.                                                     |
-| [`MapLoadingScreen`](map-loading-screen) | Map loading screen.                                                   |
-| `int`                                    | Map dataset:<br/>`0` - Default<br/>`1` - Custom<br/>`2` - Melee       |
-| `string[4]`                              | Unknown!                                                              |
-| [`MapFog`](#map-fog)                     | Map fog.                                                              |
-| [`MapWeather`](#map-weather)             | Map weather.                                                          |
-| [`MapWater`](#map-water)                 | Map water.                                                            |
-| `int`                                    | Unknown!                                                              |
-| `int`                                    | Number of players `P`.                                                |
-| `Player[P]`                              | Players data.                                                         |
-| `int`                                    | Number of forces `F`.                                                 |
-| `Force[F]`                               | Forces data.                                                          |
-| `int`                                    | Number of upgrades availability `U`.                                  |
-| `UpgradeAvailability[U]`                 | Upgrades availability.                                                |
-| `int`                                    | Number of techs availability `T`.                                     |
-| `TechAvailability[T]`                    | Techs availability.                                                   |
-| `int`                                    | Number of random group tables `G`.                                    |
-| `RandomGroupTable[G]`                    | Random groups.                                                        |
-| `int`                                    | Number of random item tables `I`.                                     |
-| `RandomItemTable[I]`                     | Random item tables.                                                   |
+| Type                                             | Field                                                                 |
+| ------------------------------------------------ | --------------------------------------------------------------------- |
+| `int`                                            | Format version. Always `28` as of patch 1.31.1.                       |
+| `int`                                            | Map version. Equivalent to the number of times the map was saved.     |
+| `int`                                            | Editor version that saved this map. Always `6072` as of patch 1.31.1. |
+| `string`                                         | Map name.                                                             |
+| `string`                                         | Map author.                                                           |
+| `string`                                         | Map description.                                                      |
+| `string`                                         | Map recommended players.                                              |
+| [`MapArea`](#maparea)                            | Map area and camera bounds.                                           |
+| [`MapSettings`](#mapsettings)                    | Map flags.                                                            |
+| `char`                                           | Map base tileset.                                                     |
+| [`MapLoadingScreen`](#maploadingscreen)          | Map loading screen.                                                   |
+| `int`                                            | Map dataset:<br/>`0` - Default<br/>`1` - Custom<br/>`2` - Melee       |
+| `string[4]`                                      | Unknown!                                                              |
+| [`MapFog`](#mapfog)                              | Map fog.                                                              |
+| [`MapWeather`](#mapweather)                      | Map weather.                                                          |
+| [`MapWater`](#mapwater)                          | Map water.                                                            |
+| `int`                                            | Unknown!                                                              |
+| `int`                                            | Number of players `P`.                                                |
+| [`Player[P]`](#player)                                      | Players data.                                                         |
+| `int`                                            | Number of forces `F`.                                                 |
+| [`Force[F]`](#force)                                       | Forces data.                                                          |
+| `int`                                            | Number of upgrades availability `U`.                                  |
+| [`UpgradeAvailability[U]`](#upgradeavailability) | Upgrades availability.                                                |
+| `int`                                            | Number of techs availability `T`.                                     |
+| [`TechAvailability[T]`](#techavailability)       | Techs availability.                                                   |
+| `int`                                            | Number of random group tables `G`.                                    |
+| [`RandomGroupTable[G]`](#randomgrouptable)       | Random groups.                                                        |
+| `int`                                            | Number of random item tables `I`.                                     |
+| [`RandomItemTable[I]`](#randomitemtable)         | Random item tables.                                                   |
 
 ### `MapArea`
 
