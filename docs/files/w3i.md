@@ -51,17 +51,17 @@ Most of its information is available in the World Editor under the _Scenario_ me
 | Type    | Field                                                    |
 | ------- | -------------------------------------------------------- |
 | `Flags` | Map flags.                                               |
-| &nbsp;  | `0x0000 0001` - Hide minimap.                            |
-| &nbsp;  | `0x0000 0002` - Custom ally priorities.                  |
-| &nbsp;  | `0x0000 0004` - Is a melee map.                          |
-| &nbsp;  | `0x0000 0010` - Masked areas are partially visible.      |
-| &nbsp;  | `0x0000 0020` - Fixed player settings for custom forces. |
-| &nbsp;  | `0x0000 0040` - Use custom forces.                       |
-| &nbsp;  | `0x0000 0080` - Use custom units.                        |
-| &nbsp;  | `0x0000 0100` - Use custom abilities.                    |
-| &nbsp;  | `0x0000 0200` - Use custom upgrades.                     |
-| &nbsp;  | `0x0000 0800` - Show waves on cliff shores.              |
-| &nbsp;  | `0x0000 1000` - Show waves on rolling sho.               |
+| &nbsp;  | `0x00000001` - Hide minimap.                            |
+| &nbsp;  | `0x00000002` - Custom ally priorities.                  |
+| &nbsp;  | `0x00000004` - Is a melee map.                          |
+| &nbsp;  | `0x00000010` - Masked areas are partially visible.      |
+| &nbsp;  | `0x00000020` - Fixed player settings for custom forces. |
+| &nbsp;  | `0x00000040` - Use custom forces.                       |
+| &nbsp;  | `0x00000080` - Use custom units.                        |
+| &nbsp;  | `0x00000100` - Use custom abilities.                    |
+| &nbsp;  | `0x00000200` - Use custom upgrades.                     |
+| &nbsp;  | `0x00000800` - Show waves on cliff shores.              |
+| &nbsp;  | `0x00001000` - Show waves on rolling sho.               |
 
 ### `MapLoadingScreen`
 

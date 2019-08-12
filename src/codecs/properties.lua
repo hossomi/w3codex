@@ -32,8 +32,7 @@ local function decode(path)
     version = reader:int(),
     editorVersion = reader:int(),
 
-    -- Unknown!
-    reader:skip(16),
+    unknown1 = reader:bytes(16),
 
     name = reader:string(),
     author = reader:string(),
@@ -48,8 +47,7 @@ local function decode(path)
 
   map.area = {
     cameraBounds = reader:bounds('LBRT', 'f'),
-    -- Repeat camera bounds counter-clockwise?
-    reader:skip(16),
+    unknown = reader:bounds('LTRB', 'f'), -- Repeat camera bounds counter-clockwise?
     complements = reader:bounds('LRBT', 'i4'),
     playable = reader:rect('WH', 'i4')
   }
@@ -80,11 +78,7 @@ local function decode(path)
 
   map.dataset = reader:int()
 
-  -- Unknown!
-  reader:string()
-  reader:string()
-  reader:string()
-  reader:string()
+  map.unknown2 = reader:string(4)
 
   map.fog = {
     type = FOG_TYPES[reader:int()],
@@ -102,15 +96,20 @@ local function decode(path)
 
   map.water = {color = reader:color()}
 
-  -- Unknown!
-  reader:int()
+  map.unknown3 = reader:int()
 
   -- ====================
   -- PLAYERS
+  -- 
+  -- Player ID
+  --  In-game player ID, ranges from 0 to MAX_PLAYERS - 1 and may contain holes.
+  --
+  -- Player index
+  --  Index in the player list, ranges from 1 to number of players in the map.
   -- ====================
 
-  local playerId = {}
-  local playerIndex = {}
+  local playerId = {} -- Player index to player ID map
+  local playerIndex = {} -- Player ID to player index map
 
   for p = 1, reader:int() do
     local player = {start = {}, allyPriorities = {}, techtree = {}}
@@ -259,7 +258,7 @@ local function encode(map, path)
   local writer = wio.FileWriter(path)
 
   writer:int(28, map.version, map.editorVersion)
-  writer:bytes(string.rep('\0', 16))
+  writer:bytes(map.unknown1)
   writer:string(map.name, map.author, map.description, map.recommendedPlayers)
 
   writer:real(map.area.cameraBounds.left, map.area.cameraBounds.bottom,
@@ -286,7 +285,7 @@ local function encode(map, path)
       map.loadingScreen.subtitle)
 
   writer:int(map.dataset)
-  writer:string('', '', '', '')
+  writer:string(map.unknown2)
 
   writer:int(FOG_TYPES[map.fog.type])
   writer:real(map.fog.min, map.fog.max, map.fog.density)
@@ -297,7 +296,7 @@ local function encode(map, path)
   writer:bytes(map.weather.light or '\0')
 
   writer:color(map.water.color)
-  writer:int(0)
+  writer:int(map.unknown3)
 
   -- ====================
   -- PLAYERS
@@ -459,6 +458,7 @@ map = decode('test/maps/' .. arg[1] .. '.w3x/war3map.w3i')
 local yaml = require 'lyaml'
 local file = assert(io.open('out/' .. arg[1] .. '.yml', 'w'))
 file:write(yaml.dump({map}))
+print(yaml.dump({map}))
 file:close()
 
 encode(map, 'out/' .. arg[1] .. '.w3i')
