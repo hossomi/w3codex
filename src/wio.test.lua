@@ -339,7 +339,7 @@ describe('WIO', function()
       assert.data('ABCD')
     end)
 
-    it('should write flags', function ()
+    it('should write flags', function()
       writer:flags(util.flags.parse(0xA0004001))
       assert.data(util.format.x2b('014000A0'))
     end)

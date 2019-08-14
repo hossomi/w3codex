@@ -143,9 +143,16 @@ local function FileReader(file, bsize)
     end,
 
     flags = function(self, mapping)
-      local data = self:int()
+      local data = multiunpack('I4', 1, self:read(4))
       if data then
         return util.flags.parse(data, mapping)
+      end
+    end,
+
+    players = function(self, playerIndex)
+      local data = multiunpack('I4', 1, self:read(4))
+      if data then
+        return util.flags.players(data, playerIndex)
       end
     end,
 
@@ -242,7 +249,13 @@ local function FileWriter(file, bsize)
     end,
 
     flags = function(self, flags)
+      util.check.defined(flags.int, 'Not a Flags object!')
       self:write(multipack('I4', flags:int()))
+    end,
+
+    players = function(self, players)
+      util.check.defined(flags.int, 'Not a PlayerFlags object!')
+      self:write(multipack('I4', players:int()))
     end,
 
     color = function(self, data)

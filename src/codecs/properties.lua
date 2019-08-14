@@ -32,20 +32,20 @@ local function decode(path)
   local map = {
     version = reader:int(),
     editorVersion = reader:int(),
-    
+
     unknown1 = util.format.b2x(reader:bytes(16)),
-    
+
     name = reader:string(),
     author = reader:string(),
     description = reader:string(),
     recommendedPlayers = reader:string(),
-    
+
     players = {},
     forces = {},
     randomGroups = {},
     randomItems = {}
   }
-  
+
   map.area = {
     cameraBounds = reader:bounds('LBRT', 'f'),
     unknown2 = reader:bounds('LTRB', 'f'), -- Repeat camera bounds counter-clockwise?
@@ -157,10 +157,13 @@ local function decode(path)
     force.allied = util.flags.msb(settings & 0x3)
     force.shared = util.flags.msb(settings >> 3 & 0x7)
 
-    util.flags.forEachMap(reader:int() & MAX_PLAYERS_MASK, playerIndex,
-        function(p)
-          map.players[p].force = f
-        end)
+    for _, p in ipairs(reader:players(playerIndex)) do
+      map.players[p].force = f
+    end
+    -- util.flags.forEachMap(reader:int() & MAX_PLAYERS_MASK, playerIndex,
+    --     function(p)
+    --       map.players[p].force = f
+    --     end)
 
     force.name = reader:string()
     map.forces[f] = force
@@ -171,12 +174,12 @@ local function decode(path)
   -- ====================
 
   for u = 1, reader:int() do
-    local players = reader:int() & MAX_PLAYERS_MASK
+    local players = reader:players(playerIndex)
     local id = reader:bytes(4)
     local level = reader:int()
     local availability = reader:int()
 
-    util.flags.forEachMap(players, playerIndex, function(p)
+    for _, p in ipairs(players) do
       if not map.players[p].techtree[id] then
         map.players[p].techtree[id] = {}
       end
@@ -188,7 +191,21 @@ local function decode(path)
       elseif availability == 2 then
         upgrade.researched = max(upgrade.researched, level + 1)
       end
-    end)
+    end
+
+    -- util.flags.forEachMap(players, playerIndex, function(p)
+    --   if not map.players[p].techtree[id] then
+    --     map.players[p].techtree[id] = {}
+    --   end
+    --   local upgrade = map.players[p].techtree[id]
+
+    --   if availability == 0 then
+    --     upgrade.available = min(upgrade.available, level)
+    --     upgrade.levels = max(upgrade.levels, level + 1)
+    --   elseif availability == 2 then
+    --     upgrade.researched = max(upgrade.researched, level + 1)
+    --   end
+    -- end)
   end
 
   -- ====================
@@ -196,12 +213,12 @@ local function decode(path)
   -- ====================
 
   for t = 1, reader:int() do
-    local players = reader:int() & MAX_PLAYERS_MASK
+    local players = reader:players(playerIndex)
     local id = reader:bytes(4)
 
-    util.flags.forEachMap(players, playerIndex, function(p)
+    for _, p in ipairs(players) do
       map.players[p].techtree[id] = false
-    end)
+    end
   end
 
   -- ====================
@@ -223,7 +240,8 @@ local function decode(path)
     for s = 1, reader:int() do
       group.sets[s] = {chance = reader:int(), objects = {}}
       for p = 1, #group.types do
-        group.sets[s].objects[p] = util.filter.except(reader:bytes(4), EMPTY_ID, '')
+        group.sets[s].objects[p] = util.filter.except(reader:bytes(4), EMPTY_ID,
+                                       '')
       end
     end
 

@@ -1,6 +1,9 @@
+require 'src.constants'
+
 -- ==============================
--- Binary and hexadecimal
+-- Formatting
 -- ==============================
+
 local function charHexToBin(hex)
   return string.char(tonumber(hex, 16))
 end
@@ -10,6 +13,7 @@ local function charBinToHex(bin)
 end
 
 local format = {
+
   x2b = function(hex)
     return (hex:gsub('..', charHexToBin))
   end,
@@ -19,7 +23,7 @@ local format = {
   end,
 
   i2x = function(int)
-    local bin = (string.pack('<i4', int))
+    local bin = (string.pack('<I4', int))
     return '0x' .. (bin:gsub('.', charBinToHex))
   end
 }
@@ -29,9 +33,17 @@ local format = {
 -- ==============================
 
 local check = {
+
   equal = function(value, expected, message)
-    if (value ~= expected) then
+    if value ~= expected then
       error(message .. '\n Expected: ' .. expected .. '\n Got: ' .. value)
+    end
+    return value
+  end,
+
+  defined = function(value, message)
+    if value == nil then
+      error(message)
     end
     return value
   end
@@ -54,33 +66,7 @@ local function transpose(table)
   return table
 end
 
-local function nextMapping(table)
-  return function(mapping, index)
-    local k, v = next(mapping, index)
-    return k, table[v]
-  end
-end
-
-local function nextNumeric(table, k)
-  local v
-  repeat
-    k, v = next(table, k)
-  until type(k) == 'number' or k == nil
-  return k, v
-end
-
 flags = {
-
-  forEachMap = function(flags, map, callback)
-    local i = 0
-    while flags ~= 0 do
-      if flags & 0x1 ~= 0 and map[i] then
-        callback(map[i])
-      end
-      i = i + 1
-      flags = flags >> 1
-    end
-  end,
 
   msb = function(data)
     local msb = 0
@@ -110,7 +96,7 @@ flags = {
 
     mapping = mapping and transpose(mapping) or {}
 
-    setmetatable(flags, {
+    return setmetatable(flags, {
       __index = function(self, key)
         if type(key) == 'string' then
           return rawget(self, mapping[key])
@@ -124,19 +110,77 @@ flags = {
       end,
 
       __pairs = function(self)
-        return nextMapping(self), mapping, nil
+        local function nextMapping(mapping, k)
+          local v
+          k, v = next(mapping, k)
+          return k, self[v]
+        end
+
+        return nextMapping, mapping, nil
       end,
 
       __ipairs = function(self)
-        return nextNumeric, self, nil
+        local function nextBit(table, n)
+          n = (n == 0) and 0x1 or n << 1
+          if table[n] ~= nil then
+            return n, table[n]
+          end
+        end
+
+        return nextBit, self, 0
       end,
 
       __tostring = function(self)
         return format.i2x(self:int())
       end
     })
+  end,
 
-    return flags
+  players = function(data, playerIndex)
+    local players = {
+
+      _playerIndex = playerIndex,
+
+      int = function(self)
+        local data = 0x0
+        for id, p in ipairs(self) do
+          data = data + math.pow(2, id)
+        end
+        return data
+      end
+    }
+
+    local mask = 0x1
+    for i = 0, MAX_PLAYERS - 1 do
+      players[i] = data & mask ~= 0
+      mask = mask << 1
+    end
+
+    return setmetatable(players, {
+      __ipairs = function(self)
+        local function valid(id)
+          return not self._playerIndex or self._playerIndex[id]
+        end
+
+        local function nextTrue(table, id)
+          local indexed = false
+          repeat
+            id = id + 1
+            indexed = not self._playerIndex or self._playerIndex[id]
+          until table[id] == nil or (table[id] == true and (indexed))
+
+          if table[id] then
+            return id, self._playerIndex and self._playerIndex[id] or nil
+          end
+        end
+
+        return nextTrue, self, -1
+      end,
+
+      __tostring = function(self)
+        return format.i2x(self:int())
+      end
+    })
   end
 }
 

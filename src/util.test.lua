@@ -25,7 +25,7 @@ describe('Util:', function()
 
   describe('flags', function()
 
-    describe('msb(int):', function()
+    describe('msb(int)', function()
       it('should work', function()
         assert.are.equals(util.flags.msb(10), 4)
       end)
@@ -36,6 +36,75 @@ describe('Util:', function()
 
       it('should get 1 for 1', function()
         assert.are.equals(util.flags.msb(1), 1)
+      end)
+    end)
+
+    describe('players(data)', function()
+      it('should work', function()
+        local players = util.flags.players(0x00000321)
+        assert.are.same(players, {
+          [0] = true,
+          [1] = false,
+          [2] = false,
+          [3] = false,
+          [4] = false,
+          [5] = true,
+          [6] = false,
+          [7] = false,
+          [8] = true,
+          [9] = true,
+          [10] = false,
+          [11] = false,
+          [12] = false,
+          [13] = false,
+          [14] = false,
+          [15] = false,
+          [16] = false,
+          [17] = false,
+          [18] = false,
+          [19] = false,
+          [20] = false,
+          [21] = false,
+          [22] = false,
+          [23] = false,
+          int = players.int
+        })
+      end)
+
+      it('int() should work', function()
+        local players = util.flags.players(0x00000101)
+        assert.are.equals(players:int(), 0x00000101)
+      end)
+
+      it('tostring(players) should work', function()
+        local players = util.flags.players(0x00000101)
+        assert.are.equals(tostring(players), '0x01010000')
+      end)
+
+      it('ipairs(players) should iterate without mappings', function()
+        local players = util.flags.players(0x00000101)
+
+        local calls = spy.new()
+        for k, v in ipairs(players) do
+          calls(k, v)
+        end
+
+        assert.spy(calls).called(2)
+        assert.spy(calls).called_with(0, nil)
+        assert.spy(calls).called_with(8, nil)
+      end)
+
+      it('ipairs(players) should iterate with mappings', function()
+        local players = util.flags.players(0x00000111, {[0] = 1, [8] = 2})
+
+        local calls = spy.new()
+        for k, v in ipairs(players) do
+          calls(k, v)
+        end
+
+        assert.spy(calls).called(2)
+        assert.spy(calls).called_with(0, 1)
+        assert.spy(calls).called_with(8, 2)
       end)
     end)
 
@@ -91,10 +160,10 @@ describe('Util:', function()
         assert.is_false(flags.d)
         assert.is_true(flags.e)
       end)
-      
+
       it('int() should work', function()
         local flags = util.flags.parse(0x00000101)
-        assert.are.equals(flags:int(), 257)
+        assert.are.equals(flags:int(), 0x00000101)
       end)
 
       it('tostring(flags) should work', function()
