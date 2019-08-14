@@ -223,6 +223,32 @@ describe('WIO', function()
         assert.is_nil(reader:rect('WH', 'i4'))
       end)
     end)
+
+    describe('flags()', function()
+
+      it('should read as booleans', function()
+        local reader = wio.FileReader('test/wio/real.bin')
+        local flags = reader:flags({
+          a = 0x00000001,
+          b = 0x00000002,
+          c = 0x00001000,
+          d = 0x00800000,
+          e = 0x20000000,
+          f = 0x80000000
+        })
+        assert.is_false(flags.a)
+        assert.is_false(flags.b)
+        assert.is_true(flags.c)
+        assert.is_true(flags.d)
+        assert.is_true(flags.e)
+        assert.is_false(flags.f)
+      end)
+
+      it('should return nil if no more data', function()
+        local reader = wio.FileReader('test/wio/short.bin')
+        assert.is_nil(reader:flags({}))
+      end)
+    end)
   end)
 
   describe('FileWriter', function()
@@ -273,12 +299,12 @@ describe('WIO', function()
 
       it('should write integer little endian', function()
         writer:int(1)
-        assert.data(util.hexToBin('01000000'))
+        assert.data(util.format.x2b('01000000'))
       end)
 
       it('should write multiple', function()
         writer:int(1, 2)
-        assert.data(util.hexToBin('0100000002000000'))
+        assert.data(util.format.x2b('0100000002000000'))
       end)
     end)
 
@@ -286,12 +312,12 @@ describe('WIO', function()
 
       it('should write short little endian', function()
         writer:short(1)
-        assert.data(util.hexToBin('0100'))
+        assert.data(util.format.x2b('0100'))
       end)
 
       it('should write multiple', function()
         writer:short(1, 2)
-        assert.data(util.hexToBin('01000200'))
+        assert.data(util.format.x2b('01000200'))
       end)
     end)
 
@@ -299,18 +325,23 @@ describe('WIO', function()
 
       it('should write real little endian', function()
         writer:real(1.23)
-        assert.data(util.hexToBin('A4709D3F'))
+        assert.data(util.format.x2b('A4709D3F'))
       end)
 
       it('should write multiple', function()
         writer:real(1.23, 1.23)
-        assert.data(util.hexToBin('A4709D3FA4709D3F'))
+        assert.data(util.format.x2b('A4709D3FA4709D3F'))
       end)
     end)
 
     it('should write color', function()
       writer:color({red = 65, green = 66, blue = 67, alpha = 68})
       assert.data('ABCD')
+    end)
+
+    it('should write flags', function ()
+      writer:flags(util.flags.parse(0xA0004001))
+      assert.data(util.format.x2b('014000A0'))
     end)
   end)
 

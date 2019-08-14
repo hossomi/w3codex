@@ -2,52 +2,158 @@ local util = require 'util'
 
 describe('Util:', function()
 
-  describe('hexToBin():', function()
-    it('should work', function()
-      assert.are.equals(util.hexToBin('4D415243454C4F20484F53534F4D49'),
-          'MARCELO HOSSOMI')
-    end)
-  end)
+  describe('format', function()
 
-  describe('binToHex():', function()
-    it('should work', function()
-      assert.are.equals(util.binToHex('MARCELO HOSSOMI'),
-          '4D415243454C4F20484F53534F4D49')
-    end)
-  end)
-
-  describe('Flags:', function()
-
-    describe('forEachMap(flags, map, callback):', function()
-  
-      local map = {}
-      map[0] = 'A'
-      map[1] = 'B'
-  
-      local function doNothing()
-      end
-  
-      it('should call callback for mapped bits', function()
-        local callback = spy.new(doNothing)
-  
-        util.flags.forEachMap(10, map, callback)
-        assert.spy(callback).was.called(1)
-        assert.spy(callback).was.called_with('B')
-        assert.spy(callback).was.not_called_with('A')
+    describe('x2b(hex)', function()
+      it('should work', function()
+        assert.are.equals(util.format.x2b('4D415243454C4F'), 'MARCELO')
       end)
     end)
-  
-    describe('msb(flags):', function()
-      it('should get MSB', function()
+
+    describe('b2x(data)', function()
+      it('should work', function()
+        assert.are.equals(util.format.b2x('MARCELO'), '4D415243454C4F')
+      end)
+    end)
+
+    describe('i2x(int)', function()
+      it('should work (4 bytes little endian)', function()
+        assert.are.equals(util.format.i2x(0x1020), '0x20100000')
+      end)
+    end)
+  end)
+
+  describe('flags', function()
+
+    describe('msb(int):', function()
+      it('should work', function()
         assert.are.equals(util.flags.msb(10), 4)
       end)
-  
+
       it('should get 0 for 0', function()
         assert.are.equals(util.flags.msb(0), 0)
       end)
-  
+
       it('should get 1 for 1', function()
         assert.are.equals(util.flags.msb(1), 1)
+      end)
+    end)
+
+    describe('parse(int, mapping)', function()
+      it('should work without mappings', function()
+        local flags = util.flags.parse(0xC0010103)
+        assert.is_true(flags[0x00000001])
+        assert.is_true(flags[0x00000002])
+        assert.is_false(flags[0x00000004])
+        assert.is_false(flags[0x00000008])
+        assert.is_false(flags[0x00000010])
+        assert.is_false(flags[0x00000020])
+        assert.is_false(flags[0x00000040])
+        assert.is_false(flags[0x00000080])
+        assert.is_true(flags[0x00000100])
+        assert.is_false(flags[0x00000200])
+        assert.is_false(flags[0x00000400])
+        assert.is_false(flags[0x00000800])
+        assert.is_false(flags[0x00001000])
+        assert.is_false(flags[0x00002000])
+        assert.is_false(flags[0x00004000])
+        assert.is_false(flags[0x00008000])
+        assert.is_true(flags[0x00010000])
+        assert.is_false(flags[0x00020000])
+        assert.is_false(flags[0x00040000])
+        assert.is_false(flags[0x00080000])
+        assert.is_false(flags[0x00100000])
+        assert.is_false(flags[0x00200000])
+        assert.is_false(flags[0x00400000])
+        assert.is_false(flags[0x00800000])
+        assert.is_false(flags[0x01000000])
+        assert.is_false(flags[0x02000000])
+        assert.is_false(flags[0x04000000])
+        assert.is_false(flags[0x08000000])
+        assert.is_false(flags[0x10000000])
+        assert.is_false(flags[0x20000000])
+        assert.is_true(flags[0x40000000])
+        assert.is_true(flags[0x80000000])
+      end)
+
+      it('should work with mappings', function()
+        local flags = util.flags.parse(0xC0010103, {
+          a = 0x00000001,
+          b = 0x00000004,
+          c = 0x00010000,
+          d = 0x00020000,
+          e = 0x80000000
+        })
+
+        assert.is_true(flags.a)
+        assert.is_false(flags.b)
+        assert.is_true(flags.c)
+        assert.is_false(flags.d)
+        assert.is_true(flags.e)
+      end)
+      
+      it('int() should work', function()
+        local flags = util.flags.parse(0x00000101)
+        assert.are.equals(flags:int(), 257)
+      end)
+
+      it('tostring(flags) should work', function()
+        local flags = util.flags.parse(0x00000101)
+        assert.are.equals(tostring(flags), '0x01010000')
+      end)
+
+      it('should reflect mapping change', function()
+        local flags = util.flags.parse(0x00000001,
+                          {a = 0x00000001, b = 0x00000002})
+        assert.are.equals(flags.a, flags[0x00000001])
+        assert.are.equals(flags.b, flags[0x00000002])
+
+        flags.a = false
+        flags.b = true
+        assert.are.equals(flags.a, flags[0x00000001])
+        assert.are.equals(flags.b, flags[0x00000002])
+      end)
+
+      it('should reflect change to mapping', function()
+        local flags = util.flags.parse(0x00000001,
+                          {a = 0x00000001, b = 0x00000002})
+
+        assert.are.equals(flags.a, flags[0x00000001])
+        assert.are.equals(flags.b, flags[0x00000002])
+
+        flags[0x00000001] = false
+        flags[0x00000002] = true
+        assert.are.equals(flags.a, flags[0x00000001])
+        assert.are.equals(flags.b, flags[0x00000002])
+      end)
+
+      it('pairs(flags) should iterate mappings', function()
+        local flags = util.flags.parse(0x00000001,
+                          {a = 0x00000001, b = 0x00000002})
+
+        local calls = spy.new()
+        for k, v in pairs(flags) do
+          calls(k, v)
+        end
+
+        assert.spy(calls).called(2)
+        assert.spy(calls).called_with('a', true)
+        assert.spy(calls).called_with('b', false)
+      end)
+
+      it('ipairs(flags) should iterate bits', function()
+        local flags = util.flags.parse(0x00000001,
+                          {a = 0x00000001, b = 0x00000002})
+
+        local calls = spy.new()
+        for k, v in ipairs(flags) do
+          calls(k, v)
+        end
+
+        assert.spy(calls).called(32)
+        assert.spy(calls).called_with(0x00000001, true)
+        assert.spy(calls).called_with(0x00000002, false)
+        -- Too lazy to check all others
       end)
     end)
   end)

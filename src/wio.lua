@@ -1,3 +1,5 @@
+local util = require 'src.util'
+
 local function multiunpack(format, n, data)
   if data then
     format = '<' .. string.rep(format, n)
@@ -140,6 +142,13 @@ local function FileReader(file, bsize)
       return multiunpack('f', n, self:read(4 * n))
     end,
 
+    flags = function(self, mapping)
+      local data = self:int()
+      if data then
+        return util.flags.parse(data, mapping)
+      end
+    end,
+
     color = function(self)
       local data = self:read(4)
       if data then
@@ -230,6 +239,10 @@ local function FileWriter(file, bsize)
 
     real = function(self, ...)
       self:write(multipack('f', ...))
+    end,
+
+    flags = function(self, flags)
+      self:write(multipack('I4', flags:int()))
     end,
 
     color = function(self, data)

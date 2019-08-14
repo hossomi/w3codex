@@ -1,6 +1,7 @@
 local wio = require 'src.wio'
 local util = require 'src.util'
 local log = require 'src.log'
+local yaml = require 'lyaml'
 require 'src.constants'
 
 local MAX_PLAYERS_MASK = 0x00FFFFFF
@@ -26,28 +27,28 @@ end
 
 local function decode(path)
   local reader = wio.FileReader(path)
-  util.checkEqual(reader:int(), 28, 'Unsupported format version.')
+  util.check.equal(reader:int(), 28, 'Unsupported format version.')
 
   local map = {
     version = reader:int(),
     editorVersion = reader:int(),
-
-    unknown1 = reader:bytes(16),
-
+    
+    unknown1 = util.format.b2x(reader:bytes(16)),
+    
     name = reader:string(),
     author = reader:string(),
     description = reader:string(),
     recommendedPlayers = reader:string(),
-
+    
     players = {},
     forces = {},
     randomGroups = {},
     randomItems = {}
   }
-
+  
   map.area = {
     cameraBounds = reader:bounds('LBRT', 'f'),
-    unknown = reader:bounds('LTRB', 'f'), -- Repeat camera bounds counter-clockwise?
+    unknown2 = reader:bounds('LTRB', 'f'), -- Repeat camera bounds counter-clockwise?
     complements = reader:bounds('LRBT', 'i4'),
     playable = reader:rect('WH', 'i4')
   }
@@ -57,20 +58,19 @@ local function decode(path)
   map.area.height = map.area.complements.top + map.area.complements.bottom
                         + map.area.playable.height
 
-  local flags = reader:int()
-  map.settings = {
-    hideMinimap = flags & 0x0001 ~= 0,
-    isMeleeMap = flags & 0x0004 ~= 0,
-    isMaskedAreaVisible = flags & 0x0010 ~= 0,
-    showWavesOnCliffShores = flags & 0x0800 ~= 0,
-    showWavesOnRollingShores = flags & 0x1000 ~= 0
-  }
+  map.settings = reader:flags({
+    hideMinimap = 0x00000001,
+    isMeleeMap = 0x00000004,
+    isMaskedAreaVisible = 0x00000010,
+    showWavesOnCliffShores = 0x00000800,
+    showWavesOnRollingShores = 0x00001000
+  })
 
   map.tileset = reader:bytes(1)
 
   map.loadingScreen = {
-    preset = util.filterNot(reader:int(), -1),
-    custom = util.filterNot(reader:string(), ''),
+    preset = util.filter.except(reader:int(), -1),
+    custom = util.filter.except(reader:string(), ''),
     text = reader:string(),
     title = reader:string(),
     subtitle = reader:string()
@@ -78,7 +78,7 @@ local function decode(path)
 
   map.dataset = reader:int()
 
-  map.unknown2 = reader:string(4)
+  map.unknown3 = {reader:string(4)}
 
   map.fog = {
     type = FOG_TYPES[reader:int()],
@@ -89,14 +89,14 @@ local function decode(path)
   }
 
   map.weather = {
-    global = util.filterNot(reader:bytes(4), EMPTY_ID),
-    sound = util.filterNot(reader:string(), ''),
-    light = util.filterNot(reader:bytes(1), '\0')
+    global = util.filter.except(reader:bytes(4), EMPTY_ID),
+    sound = util.filter.except(reader:string(), ''),
+    light = util.filter.except(reader:bytes(1), '\0')
   }
 
   map.water = {color = reader:color()}
 
-  map.unknown3 = reader:int()
+  map.unknown4 = reader:int()
 
   -- ====================
   -- PLAYERS
@@ -223,7 +223,7 @@ local function decode(path)
     for s = 1, reader:int() do
       group.sets[s] = {chance = reader:int(), objects = {}}
       for p = 1, #group.types do
-        group.sets[s].objects[p] = util.filterNot(reader:bytes(4), EMPTY_ID, '')
+        group.sets[s].objects[p] = util.filter.except(reader:bytes(4), EMPTY_ID, '')
       end
     end
 
@@ -242,7 +242,7 @@ local function decode(path)
       for i = 1, reader:int() do
         group.sets[s][i] = {
           chance = reader:int(),
-          item = util.filterNot(reader:bytes(4), EMPTY_ID, '')
+          item = util.filter.except(reader:bytes(4), EMPTY_ID, '')
         }
       end
     end
@@ -258,24 +258,20 @@ local function encode(map, path)
   local writer = wio.FileWriter(path)
 
   writer:int(28, map.version, map.editorVersion)
-  writer:bytes(map.unknown1)
+  writer:bytes(util.format.x2b(map.unknown1))
   writer:string(map.name, map.author, map.description, map.recommendedPlayers)
 
   writer:real(map.area.cameraBounds.left, map.area.cameraBounds.bottom,
       map.area.cameraBounds.right, map.area.cameraBounds.top)
 
-  writer:real(map.area.cameraBounds.left, map.area.cameraBounds.top,
-      map.area.cameraBounds.right, map.area.cameraBounds.bottom)
+  writer:real(map.area.unknown2.left, map.area.unknown2.top,
+      map.area.unknown2.right, map.area.unknown2.bottom)
 
   writer:int(map.area.complements.left, map.area.complements.right,
       map.area.complements.bottom, map.area.complements.top,
       map.area.playable.width, map.area.playable.height)
 
-  writer:int((map.settings.hideMinimap and 0x0001 or 0)
-                 + (map.settings.isMeleeMap and 0x0004 or 0)
-                 + (map.settings.isMaskedAreaVisible and 0x0010 or 0)
-                 + (map.settings.showWavesOnCliffShores and 0x0800 or 0)
-                 + (map.settings.showWavesOnRollingShores and 0x1000 or 0))
+  map.settings = writer:flags(map.settings)
 
   writer:bytes(map.tileset)
 
@@ -285,7 +281,7 @@ local function encode(map, path)
       map.loadingScreen.subtitle)
 
   writer:int(map.dataset)
-  writer:string(map.unknown2)
+  writer:string(table.unpack(map.unknown3))
 
   writer:int(FOG_TYPES[map.fog.type])
   writer:real(map.fog.min, map.fog.max, map.fog.density)
@@ -296,7 +292,7 @@ local function encode(map, path)
   writer:bytes(map.weather.light or '\0')
 
   writer:color(map.water.color)
-  writer:int(map.unknown3)
+  writer:int(map.unknown4)
 
   -- ====================
   -- PLAYERS
@@ -422,7 +418,7 @@ local function encode(map, path)
     for s = 1, #group.sets do
       writer:int(group.sets[s].chance)
       for t = 1, #group.types do
-        writer:bytes(util.filterNot(group.sets[s].objects[t], '', EMPTY_ID))
+        writer:bytes(util.filter.except(group.sets[s].objects[t], '', EMPTY_ID))
       end
     end
   end
@@ -440,7 +436,7 @@ local function encode(map, path)
     for s = 1, #group.sets do
       for i = 1, #group.sets[s] do
         writer:int(group.sets[s][i].chance)
-        writer:bytes(util.filterNot(group.sets[s][i].item, '', EMPTY_ID))
+        writer:bytes(util.filter.except(group.sets[s][i].item, '', EMPTY_ID))
       end
     end
   end
@@ -455,10 +451,8 @@ map = decode('test/maps/' .. arg[1] .. '.w3x/war3map.w3i')
 --   print(json.encode(map, {pretty = true}))
 -- end
 
-local yaml = require 'lyaml'
 local file = assert(io.open('out/' .. arg[1] .. '.yml', 'w'))
 file:write(yaml.dump({map}))
-print(yaml.dump({map}))
 file:close()
 
 encode(map, 'out/' .. arg[1] .. '.w3i')
