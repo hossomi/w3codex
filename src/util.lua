@@ -151,7 +151,7 @@ flags = {
     }
 
     local mask = 0x1
-    for i = 0, MAX_PLAYERS - 1 do
+    for i = 0, 31 do
       players[i] = data & mask ~= 0
       mask = mask << 1
     end

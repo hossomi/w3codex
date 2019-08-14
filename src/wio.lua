@@ -254,7 +254,7 @@ local function FileWriter(file, bsize)
     end,
 
     players = function(self, players)
-      util.check.defined(flags.int, 'Not a PlayerFlags object!')
+      util.check.defined(players.int, 'Not a PlayerFlags object!')
       self:write(multipack('I4', players:int()))
     end,
 

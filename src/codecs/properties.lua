@@ -332,14 +332,13 @@ local function encode(map, path)
                    + (force.shared > 1 and 0x10 or 0)
                    + (force.shared > 2 and 0x20 or 0))
 
-    local players = 0x00000000
-    for p = #map.players, 1, -1 do
-      if map.players[p].force == f then
-        players = players + 1
-      end
-      players = players << 1
+    -- The first force has unused bits set (Blizzard knows why)
+    local players = util.flags.players(f == 1 and 0xFFFFFFFF or 0x0)
+    for p = 1, #map.players do
+      players[map.players[p].id] = map.players[p].force == f
     end
-    writer:int(players)
+    writer:players(players)
+
     writer:string(force.name)
   end
 
