@@ -160,10 +160,6 @@ local function decode(path)
     for _, p in ipairs(reader:players(playerIndex)) do
       map.players[p].force = f
     end
-    -- util.flags.forEachMap(reader:int() & MAX_PLAYERS_MASK, playerIndex,
-    --     function(p)
-    --       map.players[p].force = f
-    --     end)
 
     force.name = reader:string()
     map.forces[f] = force
@@ -192,20 +188,6 @@ local function decode(path)
         upgrade.researched = max(upgrade.researched, level + 1)
       end
     end
-
-    -- util.flags.forEachMap(players, playerIndex, function(p)
-    --   if not map.players[p].techtree[id] then
-    --     map.players[p].techtree[id] = {}
-    --   end
-    --   local upgrade = map.players[p].techtree[id]
-
-    --   if availability == 0 then
-    --     upgrade.available = min(upgrade.available, level)
-    --     upgrade.levels = max(upgrade.levels, level + 1)
-    --   elseif availability == 2 then
-    --     upgrade.researched = max(upgrade.researched, level + 1)
-    --   end
-    -- end)
   end
 
   -- ====================
@@ -327,9 +309,9 @@ local function encode(map, path)
     local low = 0x00000000
     local high = 0x00000000
     for a = 1, #player.allyPriorities do
-      if player.allyPriorities[a] < 0 then
+      if player.allyPriorities[a] == PRIORITY_LOW then
         low = low + math.pow(2, map.players[a].id)
-      elseif player.allyPriorities[a] > 0 then
+      elseif player.allyPriorities[a] == PRIORITY_HIGH then
         high = high + math.pow(2, map.players[a].id)
       end
     end
