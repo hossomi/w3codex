@@ -22,9 +22,30 @@ local format = {
     return (bin:gsub('.', charBinToHex))
   end,
 
-  i2x = function(int)
-    local bin = (string.pack('<I4', int))
+  i2x = function(int, big)
+    local bin = (string.pack(big and '>I4' or '<I4', int))
     return '0x' .. (bin:gsub('.', charBinToHex))
+  end
+}
+
+local tables = {
+
+  spairs = function(t)
+    local keys = {}
+    for k in pairs(t) do
+      keys[#keys + 1] = k
+    end
+    table.sort(keys)
+
+    local i = 0
+    local function nextSorted(table)
+      i = i + 1
+      if keys[i] ~= nil then
+        return keys[i], t[keys[i]]
+      end
+    end
+
+    return nextSorted, t, nil
   end
 }
 
@@ -184,4 +205,10 @@ flags = {
   end
 }
 
-return {format = format, check = check, filter = filter, flags = flags}
+return {
+  format = format,
+  tables = tables,
+  check = check,
+  filter = filter,
+  flags = flags
+}

@@ -10,6 +10,7 @@ local function bidirectional(table, zero)
 end
 
 MAX_PLAYERS = 24
+EMPTY_ID = '\0\0\0\0'
 
 PRIORITY_NONE = 0
 PRIORITY_LOW = 1

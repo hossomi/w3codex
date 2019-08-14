@@ -29,8 +29,10 @@ local function FileReader(file, bsize)
 
     _cursor = 1,
 
+    _bcursor = 1,
+
     _bremaining = function(self)
-      return #self._buffer - self._cursor + 1
+      return #self._buffer - self._bcursor + 1
     end,
 
     _fsize = size(file),
@@ -39,29 +41,42 @@ local function FileReader(file, bsize)
       return self._fsize - self._file:seek()
     end,
 
+    tags = {},
+
+    tag = function(self, label)
+      self.tags[util.format.i2x(self._cursor - 1, true)] = label
+    end,
+
+    totalRead = function(self)
+      return self._cursor - 1
+    end,
+
     readBytes = function(self, n)
       if self:_bremaining() >= n then
         self._cursor = self._cursor + n
-        return self._buffer:sub(self._cursor - n, self._cursor - 1)
+        self._bcursor = self._bcursor + n
+        return self._buffer:sub(self._bcursor - n, self._bcursor - 1)
       elseif self:_fremaining() + self:_bremaining() >= n then
         local load = n - self:_bremaining()
-        local data = self._buffer:sub(self._cursor) .. self._file:read(load)
+        local data = self._buffer:sub(self._bcursor) .. self._file:read(load)
         self._buffer = self._file:read(math.ceil(load / bsize) * bsize - load)
-        self._cursor = 1
+        self._cursor = self._cursor + n
+        self._bcursor = 1
         return data
       end
     end,
 
     readUntil = function(self, pattern, options)
-      local left, right = self._buffer:find(pattern, self._cursor)
+      local left, right = self._buffer:find(pattern, self._bcursor)
       if left then
         local data
         if options and options.inclusive then
-          data = self._buffer:sub(self._cursor, right)
+          data = self._buffer:sub(self._bcursor, right)
         else
-          data = self._buffer:sub(self._cursor, left - 1)
+          data = self._buffer:sub(self._bcursor, left - 1)
         end
-        self._cursor = right + 1
+        self._cursor = self._cursor + right - self._bcursor + 1
+        self._bcursor = right + 1
         return data
       end
 
@@ -76,7 +91,8 @@ local function FileReader(file, bsize)
           else
             data = data .. self._buffer:sub(1, left - 1)
           end
-          self._cursor = right + 1
+          self._cursor = self._cursor + right - self._bcursor + 1
+          self._bcursor = right + 1
           return data
         end
         data = data .. self._buffer
@@ -87,14 +103,17 @@ local function FileReader(file, bsize)
     skip = function(self, n)
       if self:_bremaining() >= n then
         self._cursor = self._cursor + n
+        self._bcursor = self._bcursor + n
       elseif self:_fremaining() + self:_bremaining() >= n then
         local load = n - self:_bremaining()
         self._file:seek('set', self._file:seek() + load)
         self._buffer = self._file:read(math.ceil(load / bsize) * bsize - load)
-        self._cursor = 1
+        self._cursor = self._cursor + n
+        self._bcursor = 1
       else
         self._buffer = ''
-        self._cursor = 1
+        self._bcursor = 1
+        self._cursor = self._fsize
         self._file:seek('end')
       end
     end,
@@ -169,19 +188,6 @@ local function FileReader(file, bsize)
       end
     end,
 
-    bounds = function(self, format, type)
-      return self:preformatted(format, type, {
-        L = 'left',
-        R = 'right',
-        T = 'top',
-        B = 'bottom'
-      })
-    end,
-
-    rect = function(self, format, type)
-      return self:preformatted(format, type, {W = 'width', H = 'height'})
-    end,
-
     preformatted = function(self, format, type, mapping)
       local data = self:read(4 * #format)
       if data then
@@ -200,6 +206,19 @@ local function FileReader(file, bsize)
         end
         return object
       end
+    end,
+
+    bounds = function(self, format, type)
+      return self:preformatted(format, type, {
+        L = 'left',
+        R = 'right',
+        T = 'top',
+        B = 'bottom'
+      })
+    end,
+
+    rect = function(self, format, type)
+      return self:preformatted(format, type, {W = 'width', H = 'height'})
     end
   }
 end
@@ -210,8 +229,17 @@ local function FileWriter(file, bsize)
 
     _buffer = '',
 
+    _cursor = 1,
+
+    tags = {},
+
+    tag = function(self, label)
+      self.tags[util.format.i2x(self._cursor - 1, true)] = label
+    end,
+
     write = function(self, data)
       self._buffer = self._buffer .. data
+      self._cursor = self._cursor + #data
       if #self._buffer >= bsize then
         self._file:write(self._buffer)
         self._buffer = ''
