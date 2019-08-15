@@ -1,12 +1,16 @@
-local function unpack(data, format)
+local util = require 'src.util'
+
+local function multiunpack(format, n, data)
   if data then
-    return (format:unpack(data))
+    format = '<' .. string.rep(format, n)
+    return format:unpack(data)
   end
 end
 
-local function pack(data, format)
-  if data then
-    return (format:pack(data))
+local function multipack(format, ...)
+  if ... then
+    format = '<' .. string.rep(format, #{...})
+    return format:pack(...)
   end
 end
 
@@ -25,39 +29,54 @@ local function FileReader(file, bsize)
 
     _cursor = 1,
 
+    _bcursor = 1,
+
     _bremaining = function(self)
-      return #self._buffer - self._cursor + 1
+      return #self._buffer - self._bcursor + 1
     end,
 
     _fsize = size(file),
 
     _fremaining = function(self)
-      return self._fsize - self._file:seek() + 1
+      return self._fsize - self._file:seek()
+    end,
+
+    tags = {},
+
+    tag = function(self, label)
+      self.tags[util.format.i2x(self._cursor - 1, true)] = label
+    end,
+
+    totalRead = function(self)
+      return self._cursor - 1
     end,
 
     readBytes = function(self, n)
       if self:_bremaining() >= n then
         self._cursor = self._cursor + n
-        return self._buffer:sub(self._cursor - n, self._cursor - 1)
+        self._bcursor = self._bcursor + n
+        return self._buffer:sub(self._bcursor - n, self._bcursor - 1)
       elseif self:_fremaining() + self:_bremaining() >= n then
         local load = n - self:_bremaining()
-        local data = self._buffer:sub(self._cursor) .. self._file:read(load)
+        local data = self._buffer:sub(self._bcursor) .. self._file:read(load)
         self._buffer = self._file:read(math.ceil(load / bsize) * bsize - load)
-        self._cursor = 1
+        self._cursor = self._cursor + n
+        self._bcursor = 1
         return data
       end
     end,
 
     readUntil = function(self, pattern, options)
-      local left, right = self._buffer:find(pattern, self._cursor)
+      local left, right = self._buffer:find(pattern, self._bcursor)
       if left then
         local data
         if options and options.inclusive then
-          data = self._buffer:sub(self._cursor, right)
+          data = self._buffer:sub(self._bcursor, right)
         else
-          data = self._buffer:sub(self._cursor, left - 1)
+          data = self._buffer:sub(self._bcursor, left - 1)
         end
-        self._cursor = right + 1
+        self._cursor = self._cursor + right - self._bcursor + 1
+        self._bcursor = right + 1
         return data
       end
 
@@ -72,7 +91,8 @@ local function FileReader(file, bsize)
           else
             data = data .. self._buffer:sub(1, left - 1)
           end
-          self._cursor = right + 1
+          self._cursor = self._cursor + right - self._bcursor + 1
+          self._bcursor = right + 1
           return data
         end
         data = data .. self._buffer
@@ -83,14 +103,17 @@ local function FileReader(file, bsize)
     skip = function(self, n)
       if self:_bremaining() >= n then
         self._cursor = self._cursor + n
+        self._bcursor = self._bcursor + n
       elseif self:_fremaining() + self:_bremaining() >= n then
         local load = n - self:_bremaining()
         self._file:seek('set', self._file:seek() + load)
         self._buffer = self._file:read(math.ceil(load / bsize) * bsize - load)
-        self._cursor = 1
+        self._cursor = self._cursor + n
+        self._bcursor = 1
       else
         self._buffer = ''
-        self._cursor = 1
+        self._bcursor = 1
+        self._cursor = self._fsize
         self._file:seek('end')
       end
     end,
@@ -111,20 +134,91 @@ local function FileReader(file, bsize)
       return self:read(n)
     end,
 
-    string = function(self)
-      return self:read('\0')
+    string = function(self, n)
+      if not n or n == 1 then
+        return self:read('\0')
+      end
+
+      results = {}
+      for i = 1, n do
+        results[#results + 1] = self:read('\0')
+      end
+      return table.unpack(results)
     end,
 
-    int = function(self)
-      return unpack(self:read(4), '<I4')
+    int = function(self, n)
+      n = n or 1
+      return multiunpack('i4', n, self:read(4 * n))
     end,
 
-    short = function(self)
-      return unpack(self:read(2), '<I2')
+    short = function(self, n)
+      n = n or 1
+      return multiunpack('i2', n, self:read(2 * n))
     end,
 
-    real = function(self)
-      return unpack(self:read(4), '<f')
+    real = function(self, n)
+      n = n or 1
+      return multiunpack('f', n, self:read(4 * n))
+    end,
+
+    flags = function(self, mapping)
+      local data = multiunpack('I4', 1, self:read(4))
+      if data then
+        return util.flags.map(data, mapping)
+      end
+    end,
+
+    players = function(self)
+      local data = multiunpack('I4', 1, self:read(4))
+      if data then
+        return util.flags.players(data)
+      end
+    end,
+
+    color = function(self)
+      local data = self:read(4)
+      if data then
+        local values = {string.unpack('BBBB', data)}
+        return {
+          red = values[3],
+          green = values[2],
+          blue = values[1],
+          alpha = values[4]
+        }
+      end
+    end,
+
+    preformatted = function(self, format, type, mapping)
+      local data = self:read(4 * #format)
+      if data then
+        local object = {}
+        local values = {string.unpack(string.rep(type, #format), data)}
+
+        for i = 1, #format do
+          local f = format:sub(i, i)
+          local m = mapping[f]
+
+          if not m then
+            error('Unknown format: ' .. f)
+          end
+
+          object[m] = values[i]
+        end
+        return object
+      end
+    end,
+
+    bounds = function(self, format, type)
+      return self:preformatted(format, type, {
+        L = 'left',
+        R = 'right',
+        T = 'top',
+        B = 'bottom'
+      })
+    end,
+
+    rect = function(self, format, type)
+      return self:preformatted(format, type, {W = 'width', H = 'height'})
     end
   }
 end
@@ -135,8 +229,17 @@ local function FileWriter(file, bsize)
 
     _buffer = '',
 
+    _cursor = 1,
+
+    tags = {},
+
+    tag = function(self, label)
+      self.tags[util.format.i2x(self._cursor - 1, true)] = label
+    end,
+
     write = function(self, data)
       self._buffer = self._buffer .. data
+      self._cursor = self._cursor + #data
       if #self._buffer >= bsize then
         self._file:write(self._buffer)
         self._buffer = ''
@@ -154,20 +257,40 @@ local function FileWriter(file, bsize)
       self:write(data)
     end,
 
-    string = function(self, data)
-      self:write(data .. '\0')
+    string = function(self, ...)
+      data = {...}
+      for i = 1, #data do
+        self:write(data[i] .. '\0')
+      end
     end,
 
-    int = function(self, data)
-      self:write(pack(data, '<I4'))
+    int = function(self, ...)
+      self:write(multipack('i4', ...))
     end,
 
-    short = function(self, data)
-      self:write(pack(data, '<I2'))
+    short = function(self, ...)
+      self:write(multipack('i2', ...))
     end,
 
-    real = function(self, data)
-      self:write(pack(data, '<f'))
+    real = function(self, ...)
+      self:write(multipack('f', ...))
+    end,
+
+    flags = function(self, flags)
+      util.check.defined(flags.int, 'Not a Flags object!')
+      self:write(multipack('I4', flags:int()))
+    end,
+
+    players = function(self, players)
+      util.check.defined(players.int, 'Not a PlayerFlags object!')
+      self:write(multipack('I4', players:int()))
+    end,
+
+    color = function(self, data)
+      if data then
+        self:write(string.pack('BBBB', data.blue or 0, data.green or 0,
+                       data.red or 0, data.alpha or 0))
+      end
     end
   }
 end

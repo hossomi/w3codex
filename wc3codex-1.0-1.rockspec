@@ -14,7 +14,8 @@ description = {
 dependencies = {
    'lua >= 5.3',
    'busted',
-   'rapidjson'
+   'lyaml',
+   'lualogging'
 }
 build = {
    type = 'builtin',

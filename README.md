@@ -2,13 +2,15 @@
 
 A Lua library to convert Warcraft III files to and from JSON.
 
+[Documentation](docs/index.md)
+
 ## Usage
 
 *No usage yet!*
 
 ## Build
 
-### Requirements:
+Requirements:
 - [`luarocks`](https://luarocks.org/) to build project
 - `cmake` to build some dependencies
 
