@@ -1,12 +1,14 @@
 # WC3 Codex
 
-A Lua library to convert Warcraft III files to and from JSON.
+A Lua library to convert Warcraft III files to and from YAML using a friendly format.
 
 [Documentation](docs/index.md)
 
 ## Usage
 
 *No usage yet!*
+
+![Data flow](docs/flow.png)
 
 ## Build
 
@@ -32,7 +34,3 @@ luarocks --tree .luarocks make
 > `LUA_PATH` and `LUA_CPATH` to be able to build the project.
 > 
 > Check [.luarc](https://gist.github.com/hossomi/ef5f36c38af9c8689df3de5a4bc1d193)
-
-## File formats
-
-*None yet!*
