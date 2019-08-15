@@ -98,7 +98,7 @@ flags = {
     return msb
   end,
 
-  parse = function(data, mapping)
+  map = function(data, mapping)
     local flags = {
       int = function(self)
         local data = 0
@@ -157,45 +157,35 @@ flags = {
     })
   end,
 
-  players = function(data, playerIndex)
+  players = function(data)
     local players = {
-
-      _playerIndex = playerIndex,
 
       int = function(self)
         local data = 0x0
-        for id, p in ipairs(self) do
-          data = data + math.pow(2, id)
+        for id, present in ipairs(self) do
+          if present then
+            data = data + math.pow(2, id)
+          end
         end
         return data
       end
     }
 
-    local mask = 0x1
     for i = 0, 31 do
-      players[i] = data & mask ~= 0
-      mask = mask << 1
+      players[i] = data & 0x1 ~= 0
+      data = data >> 1
     end
 
     return setmetatable(players, {
       __ipairs = function(self)
-        local function valid(id)
-          return not self._playerIndex or self._playerIndex[id]
-        end
-
-        local function nextTrue(table, id)
-          local indexed = false
-          repeat
-            id = id + 1
-            indexed = not self._playerIndex or self._playerIndex[id]
-          until table[id] == nil or (table[id] == true and (indexed))
-
-          if table[id] then
-            return id, self._playerIndex and self._playerIndex[id] or nil
+        local function nextIndex(table, id)
+          id = id + 1
+          if table[id] ~= nil then
+            return id, table[id]
           end
         end
 
-        return nextTrue, self, -1
+        return nextIndex, self, -1
       end,
 
       __tostring = function(self)

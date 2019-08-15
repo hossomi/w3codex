@@ -8,16 +8,62 @@ All sizes are in bytes.
 
 ## Data types
 
-| Type     | Size          | Description                      |
-| -------- | ------------- | -------------------------------- |
-| `int`    | 4             | A signed integer.                |
-| `uint`   | 1             | A unsigned integer.              |
-| `char`   | 1             | A character.                     |
-| `real`   | 4             | A floating point.                |
-| `string` | Variable      | A string terminated by `\0`.     |
-| `T[n]`   | `n*sizeof(T)` | An array of `T` of size `n`.     |
-| `4CC`    | 4             | A 4-char code.                   |
-| `UID`    | 32            | Usually shown as a 32-char code. |
+| Type     | Size          | Description                       |
+| -------- | ------------- | --------------------------------- |
+| `int`    | 4             | A signed integer (little endian). |
+| `byte`   | 1             | A unsigned integer.               |
+| `char`   | 1             | A character.                      |
+| `real`   | 4             | A floating point (little endian). |
+| `string` | Variable      | A string terminated by `\0`.      |
+| `T[n]`   | `n*sizeof(T)` | An array of `T` of size `n`.      |
+| `4CC`    | 4             | A 4-char code.                    |
+| `UID`    | 32            | Usually shown as a 32-char code.  |
+
+## Random `4CC`
+
+There are a few special `4CC` codes to represent random objects.
+In the tables below, upper case characters are constants, lower case are variables and spaces are only separators.
+
+| Format      | Description                                                  |
+| ----------- | ------------------------------------------------------------ |
+| `YYUx`      | Random unit of level code `x`.                               |
+| `YYB/`      | Random neutral building.                                     |
+| `YcIx`      | Random item of category code `c` and level code `x`.         |
+| `pg 0x00 Q` | Random unit/building/item from pool `p` of random group `g`. |
+
+For random units/items, levels are coded to `x = n + 0x30` where `n` is the desired level.
+Use level -1 for any level.
+_Examples:_
+
+| Code `x`   | Level |
+| ---------- | ----- |
+| `0x2F` `/` | Any   |
+| `0x30` `0` | 0     |
+| `0x31` `1` | 1     |
+| `0x3F` `?` | 15    |
+
+For random items, categories are coded to `c = i + 0x69` where `i` is the category index in the list.
+Use `0x59 Y` for any category.
+
+| Code `c`   | Category      |
+| ---------- | ------------- |
+| `0x59` `Y` | Any           |
+| `0x69` `i` | Permanent     |
+| `0x6A` `j` | Charged       |
+| `0x6B` `k` | Powerup       |
+| `0x6C` `l` | Artifact      |
+| `0x6D` `m` | Purchaseable  |
+| `0x6E` `n` | Campaign      |
+| `0x6F` `o` | Miscellaneous |
+
+For random group references, the code always ends with `0x00 Q`.
+Then, the first two bytes are the pool index and the random group ID, respectively.
+_Examples:_
+
+| ID                 | Description        |
+| ------------------ | ------------------ |
+| `0x00 0x00 0x00 Q` | Pool 0 of group 0. |
+| `0x01 0x03 0x00 Q` | Pool 1 of group 3. |
 
 ## Structures (size)
 
@@ -30,10 +76,10 @@ A RGBA color. Field order is always the same.
 
 | Type   | Description  |
 | ------ | ------------ |
-| `uint` | Red value.   |
-| `uint` | Green value. |
-| `uint` | Blue value.  |
-| `uint` | Alpha value. |
+| `byte` | Blue value.  |
+| `byte` | Green value. |
+| `byte` | Red value.   |
+| `byte` | Alpha value. |
 
 ### `Bounds[T]` (16)
 
@@ -61,7 +107,7 @@ Order may vary and should always specified in the description.
 
 ### `Flags` (4)
 
-4 bytes which each bit represent a true (`1`) or false (`0`) value. The following rows should describe each known bit.
+An unsigned, 4 bytes little-endian integer which each bit represent a true (`1`) or false (`0`) value. The following rows should describe each known bit.
 
 _Example:_
 

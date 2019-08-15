@@ -25,15 +25,15 @@ Most of its information is available in the World Editor under the _Scenario_ me
 | [`MapWater`](#mapwater)                          | Map water.                                                            |
 | `int`                                            | Unknown!                                                              |
 | `int`                                            | Number of players `P`.                                                |
-| [`Player[P]`](#player)                                      | Players data.                                                         |
+| [`Player[P]`](#player)                           | Players data.                                                         |
 | `int`                                            | Number of forces `F`.                                                 |
-| [`Force[F]`](#force)                                       | Forces data.                                                          |
+| [`Force[F]`](#force)                             | Forces data.                                                          |
 | `int`                                            | Number of upgrades availability `U`.                                  |
 | [`UpgradeAvailability[U]`](#upgradeavailability) | Upgrades availability.                                                |
 | `int`                                            | Number of techs availability `T`.                                     |
 | [`TechAvailability[T]`](#techavailability)       | Techs availability.                                                   |
 | `int`                                            | Number of random group tables `G`.                                    |
-| [`RandomGroupTable[G]`](#randomgrouptable)       | Random groups.                                                        |
+| [`RandomGroup[G]`](#randomgroup)                 | Random groups.                                                        |
 | `int`                                            | Number of random item tables `I`.                                     |
 | [`RandomItemTable[I]`](#randomitemtable)         | Random item tables.                                                   |
 
@@ -48,9 +48,9 @@ Most of its information is available in the World Editor under the _Scenario_ me
 
 ### `MapSettings`
 
-| Type    | Field                                                    |
-| ------- | -------------------------------------------------------- |
-| `Flags` | Map flags.                                               |
+| Type    | Field                                                   |
+| ------- | ------------------------------------------------------- |
+| `Flags` | Map flags.                                              |
 | &nbsp;  | `0x00000001` - Hide minimap.                            |
 | &nbsp;  | `0x00000002` - Custom ally priorities.                  |
 | &nbsp;  | `0x00000004` - Is a melee map.                          |
@@ -88,7 +88,7 @@ Most of its information is available in the World Editor under the _Scenario_ me
 | Type     | Description                                                                                             |
 | -------- | ------------------------------------------------------------------------------------------------------- |
 | `4CC`    | Weather code. `0000` if disabled.                                                                       |
-| `string` | Environment sound label. Empty if disabled.<br/>**Values:** `mountains`, `lake`, `psychotic`, `dungeon` |
+| `string` | Environment sound label. Empty if disabled.<br/>**Values:** `Default`, `lake`, `psychotic`, `dungeon` |
 | `char`   | Tileset of custom lighting. `\0` if disabled.                                                           |
 
 ### `MapWater`
@@ -147,31 +147,30 @@ If the tech is present in this list, then it is disabled.
 | `PlayerFlags` | Affected players.                |
 | `4CC`         | Tech ID (unit, item or ability). |
 
-### `RandomGroupTable`
+### `RandomGroup`
 
-In a random group table, each column is a pool which will be randomly rolled, and each row is an entry.
-It is called "group" because it contains multiple pools of different types but sharing rolling chances.
+A random group is a weird structure.
+Each column is a pool of a certain type (units, buildings or items) which will be randomly rolled.
+Each row is a set with a rolling chance.
 
-Each pool has a type (unit, building or item) and each entry has a chance of being rolled.
+Each pool is completely independent except for the set chances that are shared.
+When referring to a random group, a pool of acceptable type must also be chosen.
 
-_Example:_ when placing a random building in the World Editor, the user can select a table and a pool of type "building".
-The building in that spot will be randomly rolled among all the entries in that pool.
+| Type                | Description                                                  |
+| ------------------- | ------------------------------------------------------------ |
+| `int`               | Group ID. Used in references to this group.                  |
+| `string`            | Group name.                                                  |
+| `int`               | Number of pools `N`.                                         |
+| `int[N]`            | Pool types:<br/>`0` - Unit<br/>`1` - Building<br/>`2` - Item |
+| `int`               | Number of entries `S`.                                       |
+| `RandomGroupSet[S]` | Group sets.                                                  |
 
-| Type                  | Description                                                  |
-| --------------------- | ------------------------------------------------------------ |
-| `int`                 | Table ID.                                                    |
-| `string`              | Table name.                                                  |
-| `int`                 | Number of pools `N`.                                         |
-| `int[N]`              | Pool types:<br/>`0` - Unit<br/>`1` - Building<br/>`2` - Item |
-| `int`                 | Number of entries `E`.                                       |
-| `RandomGroupEntry[E]` | Table entries.                                               |
+### `RandomGroupSet`
 
-### `RandomGroupEntry`
-
-| Type     | Description                             |
-| -------- | --------------------------------------- |
-| `int`    | Chance to roll.                         |
-| `4CC[N]` | Object IDs for each pool in this entry. |
+| Type     | Description                           |
+| -------- | ------------------------------------- |
+| `int`    | Chance to roll.                       |
+| `4CC[N]` | Object IDs for each pool in this set. |
 
 The object type must match the corresponding pool type.
 
@@ -181,20 +180,17 @@ The sum of all chances in the same table cannot be greater than 100%. If lower, 
 
 ### `RandomItemTable`
 
-A random item table contains multiple sets that roll independently (but not individually), and each set contains an item pool from which one item will be randomly rolled.
+A random item table contains multiple sets, each containing an item pool from which one item will be randomly rolled.
 
-Each set may yield one item in a roll.
-Sets cannot be rolled individually, the entire table is always rolled and yields each of its set results.
+Each set rolls independently, but all sets in a table are always rolled together.
+The table yields the result of each of its sets (if any).
 
-_Example:_ when selecting the dropped items for a pre-placed unit in the World Editor, the user can select a table.
-When that unit dies, the entire table is rolled and the result of each set is dropped.
-
-| Type               | Description         |
-| ------------------ | ------------------- |
-| `int`              | Table ID.           |
-| `string`           | Table Name.         |
-| `int`              | Number of sets `N`. |
-| `RandomItemSet[N]` | Table sets.         |
+| Type               | Description                                 |
+| ------------------ | ------------------------------------------- |
+| `int`              | Table ID. Used in references to this table. |
+| `string`           | Table Name.                                 |
+| `int`              | Number of sets `N`.                         |
+| `RandomItemSet[N]` | Table sets.                                 |
 
 ### `RandomItemSet`
 

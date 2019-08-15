@@ -26,12 +26,14 @@ local Codec = {
 
   decode = function(self, path)
     local reader = wio.FileReader(path)
-    util.check.equal(reader:int(), 28, 'Unsupported format version.')
 
-    local map = {
+    local properties = {
+      formatVersion = util.check.equal(reader:int(), 28,
+          'Unsupported format version.'),
       version = reader:int(),
       editorVersion = reader:int(),
 
+      -- No idea what these 16 bytes are.
       unknown1 = util.format.b2x(reader:bytes(16)),
 
       name = reader:string(),
@@ -41,183 +43,150 @@ local Codec = {
 
       players = {},
       forces = {},
+      upgrades = {},
+      techtree = {},
       randomGroups = {},
       randomItems = {}
     }
 
-    reader:tag('map.area')
-    map.area = {
+    reader:tag('properties.area')
+    properties.area = {
       cameraBounds = reader:bounds('LBRT', 'f'),
-      unknown2 = reader:bounds('LTRB', 'f'), -- Repeat camera bounds counter-clockwise?
+      -- Repeat camera bounds counter-clockwise?
+      unknown2 = reader:bounds('LTRB', 'f'),
       complements = reader:bounds('LRBT', 'i4'),
       playable = reader:rect('WH', 'i4')
     }
 
-    map.area.width = map.area.complements.left + map.area.complements.right
-                         + map.area.playable.width
-    map.area.height = map.area.complements.top + map.area.complements.bottom
-                          + map.area.playable.height
-
-    reader:tag('map.settings')
-    map.settings = reader:flags({
+    reader:tag('properties.settings')
+    properties.settings = reader:flags({
       hideMinimap = 0x00000001,
+      customAllyPriorities = 0x00000002,
       isMeleeMap = 0x00000004,
       isMaskedAreaVisible = 0x00000010,
+      fixedPlayerSettings = 0x00000020,
+      customForces = 0x00000040,
+      customTechtree = 0x00000080,
+      customAbilities = 0x00000100,
+      customUpgrades = 0x00000200,
       showWavesOnCliffShores = 0x00000800,
       showWavesOnRollingShores = 0x00001000
     })
 
-    map.tileset = reader:bytes(1)
+    properties.tileset = reader:bytes(1)
 
-    reader:tag('map.loadingScreen')
-    map.loadingScreen = {
-      preset = util.filter.except(reader:int(), -1),
-      custom = util.filter.except(reader:string(), ''),
+    reader:tag('properties.loadingScreen')
+    properties.loadingScreen = {
+      preset = reader:int(),
+      custom = reader:string(),
       text = reader:string(),
       title = reader:string(),
       subtitle = reader:string()
     }
 
-    map.dataset = reader:int()
+    properties.dataset = reader:int()
 
-    map.unknown3 = {reader:string(4)}
+    -- Supposedly prologue screen data, but seems unreachable.
+    properties.unknown3 = {reader:string(4)}
 
-    reader:tag('map.fog')
-    map.fog = {
-      type = FOG_TYPES[reader:int()],
+    reader:tag('properties.fog')
+    properties.fog = {
+      type = reader:int(),
       min = reader:real(),
       max = reader:real(),
       density = reader:real(),
       color = reader:color()
     }
 
-    reader:tag('map.weather')
-    map.weather = {
-      global = util.filter.except(reader:bytes(4), EMPTY_ID),
-      sound = util.filter.except(reader:string(), ''),
-      light = util.filter.except(reader:bytes(1), '\0')
+    reader:tag('properties.weather')
+    properties.weather = {
+      global = reader:bytes(4),
+      sound = reader:string(),
+      light = reader:bytes(1)
     }
 
-    reader:tag('map.water')
-    map.water = {color = reader:color()}
+    reader:tag('properties.water')
+    properties.water = {color = reader:color()}
 
-    map.unknown4 = reader:int()
+    -- Really no idea what this is.
+    properties.unknown4 = reader:int()
 
     -- ====================
     -- PLAYERS
     -- ====================
 
-    local playerId = {} -- Player index to player ID map
-    local playerIndex = {} -- Player ID to player index map
-
-    reader:tag('map.players')
+    reader:tag('properties.players')
     for p = 1, reader:int() do
-      local player = {start = {}, allyPriorities = {}, techtree = {}}
-
-      reader:tag('map.players[' .. p .. ']')
-      player.id = reader:int()
-      player.type = PLAYER_TYPES[reader:int()]
-      player.race = RACES[reader:int()]
-      player.start.fixed = reader:int() == 1
-      player.name = reader:string()
-      player.start.x = reader:real()
-      player.start.y = reader:real()
-
-      local low = reader:int()
-      local high = reader:int()
-      for a = 1, MAX_PLAYERS do
-        player.allyPriorities[a - 1] = (low & 0x1 ~= 0 and PRIORITY_LOW)
-                                           or (high & 0x1 ~= 0 and PRIORITY_HIGH)
-                                           or PRIORITY_NONE
-        low = low >> 1
-        high = high >> 1
-      end
-
-      map.players[p] = player
-      playerId[p] = player.id
-      playerIndex[player.id] = p
-    end
-
-    -- Remap ally priorities
-    for p = 1, #map.players do
-      local allyPriorities = {}
-      for a = 1, #map.players do
-        allyPriorities[a] = map.players[p].allyPriorities[playerId[a]]
-      end
-      map.players[p].allyPriorities = allyPriorities
+      reader:tag('properties.players[' .. p .. ']')
+      properties.players[p] = {
+        id = reader:int(),
+        type = reader:int(),
+        race = reader:int(),
+        fixedStartLocation = reader:int() == 1,
+        name = reader:string(),
+        startLocationX = reader:real(),
+        startLocationY = reader:real(),
+        lowAllyPriorities = reader:players(),
+        highAllyPriorities = reader:players()
+      }
     end
 
     -- ====================
     -- FORCES
     -- ====================
 
-    reader:tag('map.forces')
+    reader:tag('properties.forces')
     for f = 1, reader:int() do
-      local force = {}
-
-      reader:tag('map.forces[' .. f .. ']')
-      local settings = reader:int()
-      force.allied = util.flags.msb(settings & 0x3)
-      force.shared = util.flags.msb(settings >> 3 & 0x7)
-
-      for _, p in ipairs(reader:players(playerIndex)) do
-        map.players[p].force = f
-      end
-
-      force.name = reader:string()
-      map.forces[f] = force
+      reader:tag('properties.forces[' .. f .. ']')
+      properties.forces[f] = {
+        settings = reader:flags({
+          allied = 0x00000001,
+          alliedVictory = 0x00000002,
+          sharedVision = 0x00000008,
+          sharedControl = 0x00000010,
+          sharedAdvancedControl = 0x00000020
+        }),
+        players = reader:players(),
+        name = reader:string()
+      }
     end
 
     -- ====================
     -- UPGRADES
     -- ====================
 
-    reader:tag('map.upgrades')
+    reader:tag('properties.upgrades')
     for u = 1, reader:int() do
-      reader:tag('map.upgrades[' .. u .. ']')
-      local players = reader:players(playerIndex)
-      local id = reader:bytes(4)
-      local level = reader:int()
-      local availability = reader:int()
-
-      for _, p in ipairs(players) do
-        if not map.players[p].techtree[id] then
-          map.players[p].techtree[id] = {}
-        end
-        local upgrade = map.players[p].techtree[id]
-
-        if availability == 0 then
-          upgrade.available = min(upgrade.available, level)
-          upgrade.levels = max(upgrade.levels, level + 1)
-        elseif availability == 2 then
-          upgrade.researched = max(upgrade.researched, level + 1)
-        end
-      end
+      reader:tag('properties.upgrades[' .. u .. ']')
+      properties.upgrades[u] = {
+        players = reader:players(playerIndex),
+        id = reader:bytes(4),
+        level = reader:int(),
+        availability = reader:int()
+      }
     end
 
     -- ====================
     -- DISABLED TECHTREE
     -- ====================
 
-    reader:tag('map.techtree')
+    reader:tag('properties.techtree')
     for t = 1, reader:int() do
-      reader:tag('map.techtree[' .. t .. ']')
-      local players = reader:players(playerIndex)
-      local id = reader:bytes(4)
-
-      for _, p in ipairs(players) do
-        map.players[p].techtree[id] = false
-      end
+      reader:tag('properties.techtree[' .. t .. ']')
+      properties.techtree[t] = {
+        players = reader:players(playerIndex),
+        id = reader:bytes(4)
+      }
     end
 
     -- ====================
-    -- RANDOM UNIT TABLES
+    -- RANDOM GROUPS
     -- ====================
 
-    reader:tag('map.randomGroups')
+    reader:tag('properties.randomGroups')
     for g = 1, reader:int() do
-      reader:tag('map.randomGroups[' .. g .. ']')
-      local group = {
+      reader:tag('properties.randomGroups[' .. g .. ']')
+      properties.randomGroups[g] = {
         id = reader:int(),
         name = reader:string(),
         types = {},
@@ -225,141 +194,123 @@ local Codec = {
       }
 
       for p = 1, reader:int() do
-        group.types[p] = RANDOM_TYPES[reader:int() + 1]
+        properties.randomGroups[g].types[p] = reader:int()
       end
 
       for s = 1, reader:int() do
-        group.sets[s] = {chance = reader:int(), objects = {}}
-        for p = 1, #group.types do
-          group.sets[s].objects[p] = util.filter.except(reader:bytes(4),
-                                         EMPTY_ID, '')
+        properties.randomGroups[g].sets[s] =
+            {chance = reader:int(), objects = {}}
+
+        for p = 1, #properties.randomGroups[g].types do
+          properties.randomGroups[g].sets[s].objects[p] = reader:bytes(4)
         end
       end
-
-      map.randomGroups[g] = group
     end
 
     -- ====================
     -- RANDOM ITEM TABLES
     -- ====================
 
-    reader:tag('map.randomItems')
+    reader:tag('properties.randomItems')
     for g = 1, reader:int() do
-      reader:tag('map.randomItems[' .. g .. ']')
-      local group = {id = reader:int(), name = reader:string(), sets = {}}
+      reader:tag('properties.randomItems[' .. g .. ']')
+      properties.randomItems[g] = {
+        id = reader:int(),
+        name = reader:string(),
+        sets = {}
+      }
 
       for s = 1, reader:int() do
-        group.sets[s] = {}
+        properties.randomItems[g].sets[s] = {}
         for i = 1, reader:int() do
-          group.sets[s][i] = {
-            chance = reader:int(),
-            item = util.filter.except(reader:bytes(4), EMPTY_ID, '')
-          }
+          properties.randomItems[g].sets[s][i] =
+              {chance = reader:int(), item = reader:bytes(4)}
         end
       end
-
-      map.randomItems[g] = group
     end
 
     reader:close()
-    return map, reader.tags
+    return properties, reader.tags
   end,
 
-  encode = function(self, map, path)
+  encode = function(self, properties, path)
     local writer = wio.FileWriter(path)
 
-    writer:int(28, map.version, map.editorVersion)
-    writer:bytes(util.format.x2b(map.unknown1))
-    writer:string(map.name, map.author, map.description, map.recommendedPlayers)
+    writer:int(properties.formatVersion, properties.version,
+        properties.editorVersion)
+    writer:bytes(util.format.x2b(properties.unknown1))
+    writer:string(properties.name, properties.author, properties.description,
+        properties.recommendedPlayers)
 
-    writer:tag('map.area')
-    writer:real(map.area.cameraBounds.left, map.area.cameraBounds.bottom,
-        map.area.cameraBounds.right, map.area.cameraBounds.top)
+    writer:tag('properties.area')
+    writer:real(properties.area.cameraBounds.left,
+        properties.area.cameraBounds.bottom, properties.area.cameraBounds.right,
+        properties.area.cameraBounds.top)
 
-    writer:real(map.area.unknown2.left, map.area.unknown2.top,
-        map.area.unknown2.right, map.area.unknown2.bottom)
+    writer:real(properties.area.unknown2.left, properties.area.unknown2.top,
+        properties.area.unknown2.right, properties.area.unknown2.bottom)
 
-    writer:int(map.area.complements.left, map.area.complements.right,
-        map.area.complements.bottom, map.area.complements.top,
-        map.area.playable.width, map.area.playable.height)
+    writer:int(properties.area.complements.left,
+        properties.area.complements.right, properties.area.complements.bottom,
+        properties.area.complements.top, properties.area.playable.width,
+        properties.area.playable.height)
 
-    writer:tag('map.settings')
-    map.settings = writer:flags(map.settings)
+    writer:tag('properties.settings')
+    properties.settings = writer:flags(properties.settings)
 
-    writer:bytes(map.tileset)
+    writer:bytes(properties.tileset)
 
-    writer:tag('map.loadingScreen')
-    writer:int(map.loadingScreen.preset or -1)
-    writer:string(map.loadingScreen.custom or '')
-    writer:string(map.loadingScreen.text, map.loadingScreen.title,
-        map.loadingScreen.subtitle)
+    writer:tag('properties.loadingScreen')
+    writer:int(properties.loadingScreen.preset)
+    writer:string(properties.loadingScreen.custom)
+    writer:string(properties.loadingScreen.text, properties.loadingScreen.title,
+        properties.loadingScreen.subtitle)
 
-    writer:int(map.dataset)
-    writer:string(table.unpack(map.unknown3))
+    writer:int(properties.dataset)
+    writer:string(table.unpack(properties.unknown3))
 
-    writer:tag('map.fog')
-    writer:int(FOG_TYPES[map.fog.type])
-    writer:real(map.fog.min, map.fog.max, map.fog.density)
-    writer:color(map.fog.color)
+    writer:tag('properties.fog')
+    writer:int(properties.fog.type)
+    writer:real(properties.fog.min, properties.fog.max, properties.fog.density)
+    writer:color(properties.fog.color)
 
-    writer:tag('map.weather')
-    writer:bytes(map.weather.global or EMPTY_ID)
-    writer:string(map.weather.sound or '')
-    writer:bytes(map.weather.light or '\0')
+    writer:tag('properties.weather')
+    writer:bytes(properties.weather.global)
+    writer:string(properties.weather.sound)
+    writer:bytes(properties.weather.light)
 
-    writer:tag('map.water')
-    writer:color(map.water.color)
-    writer:int(map.unknown4)
+    writer:tag('properties.water')
+    writer:color(properties.water.color)
+    writer:int(properties.unknown4)
 
     -- ====================
     -- PLAYERS
     -- ====================
 
-    writer:tag('map.players')
-    writer:int(#map.players)
-    for p = 1, #map.players do
-      writer:tag('map.players[' .. p .. ']')
-      local player = map.players[p]
-      writer:int(player.id, PLAYER_TYPES[player.type], RACES[player.race],
-          player.start.fixed and 1 or 0)
+    writer:tag('properties.players')
+    writer:int(#properties.players)
+    for p = 1, #properties.players do
+      writer:tag('properties.players[' .. p .. ']')
+      local player = properties.players[p]
+      writer:int(player.id, player.type, player.race,
+          player.fixedStartLocation and 1 or 0)
       writer:string(player.name)
-      writer:real(player.start.x, player.start.y)
-
-      local low = 0x00000000
-      local high = 0x00000000
-      for a = 1, #player.allyPriorities do
-        if player.allyPriorities[a] == PRIORITY_LOW then
-          low = low + math.pow(2, map.players[a].id)
-        elseif player.allyPriorities[a] == PRIORITY_HIGH then
-          high = high + math.pow(2, map.players[a].id)
-        end
-      end
-
-      writer:int(low, high)
+      writer:real(player.startLocationX, player.startLocationY)
+      writer:players(player.lowAllyPriorities)
+      writer:players(player.highAllyPriorities)
     end
 
     -- ====================
     -- FORCES
     -- ====================
 
-    writer:tag('map.forces')
-    writer:int(#map.forces)
-    for f = 1, #map.forces do
-      writer:tag('map.forces[' .. f .. ']')
-      local force = map.forces[f]
-      writer:int((force.allied > 0 and 0x01 or 0)
-                     + (force.allied > 1 and 0x02 or 0)
-                     + (force.shared > 0 and 0x08 or 0)
-                     + (force.shared > 1 and 0x10 or 0)
-                     + (force.shared > 2 and 0x20 or 0))
-
-      -- The first force has unused bits set (Blizzard knows why)
-      local players = util.flags.players(f == 1 and 0xFFFFFFFF or 0x0)
-      for p = 1, #map.players do
-        players[map.players[p].id] = map.players[p].force == f
-      end
-      writer:players(players)
-
+    writer:tag('properties.forces')
+    writer:int(#properties.forces)
+    for f = 1, #properties.forces do
+      writer:tag('properties.forces[' .. f .. ']')
+      local force = properties.forces[f]
+      writer:flags(force.settings)
+      writer:players(force.players)
       writer:string(force.name)
     end
 
@@ -367,85 +318,47 @@ local Codec = {
     -- UPGRADES
     -- ====================
 
-    local upgrades = {}
-    local techtree = {}
-
-    local pmask = 0x00000001
-    for p = 1, #map.players do
-      local player = map.players[p]
-
-      for id, u in pairs(player.techtree) do
-        if type(u) == 'boolean' then
-          techtree[#techtree + 1] = {player = pmask, id = id}
-        else
-          if u.researched then
-            for l = 0, u.researched - 1 do
-              upgrades[#upgrades + 1] = {
-                player = pmask,
-                id = id,
-                level = l,
-                availability = 2
-              }
-            end
-          end
-          if u.available then
-            for l = u.available, u.levels - 1 do
-              upgrades[#upgrades + 1] = {
-                player = pmask,
-                id = id,
-                level = l,
-                availability = 0
-              }
-            end
-          end
-        end
-      end
-
-      pmask = pmask << 1
-    end
-
-    writer:tag('map.upgrades')
-    writer:int(#upgrades)
-    for u = 1, #upgrades do
-      writer:tag('map.upgrades[' .. u .. ']')
-      local upgrade = upgrades[u]
-      writer:int(upgrade.player)
+    writer:tag('properties.upgrades')
+    writer:int(#properties.upgrades)
+    for u = 1, #properties.upgrades do
+      writer:tag('properties.upgrades[' .. u .. ']')
+      local upgrade = properties.upgrades[u]
+      writer:players(upgrade.players)
       writer:bytes(upgrade.id)
       writer:int(upgrade.level, upgrade.availability)
     end
 
-    writer:tag('map.techtree')
-    writer:int(#techtree)
-    for t = 1, #techtree do
-      writer:tag('map.techtree[' .. t .. ']')
-      local tech = techtree[t]
-      writer:int(tech.player)
+    writer:tag('properties.techtree')
+    writer:int(#properties.techtree)
+    for t = 1, #properties.techtree do
+      writer:tag('properties.techtree[' .. t .. ']')
+      local tech = properties.techtree[t]
+      writer:players(tech.players)
       writer:bytes(tech.id)
     end
 
     -- ====================
-    -- RANDOM UNIT TABLES
+    -- RANDOM GROUPS
     -- ====================
 
-    writer:tag('map.randomGroups')
-    writer:int(#map.randomGroups)
-    for g = 1, #map.randomGroups do
-      writer:tag('map.randomGroups[' .. g .. ']')
-      local group = map.randomGroups[g]
+    writer:tag('properties.randomGroups')
+    writer:int(#properties.randomGroups)
+    for g = 1, #properties.randomGroups do
+      writer:tag('properties.randomGroups[' .. g .. ']')
+      local group = properties.randomGroups[g]
       writer:int(group.id)
       writer:string(group.name)
 
       writer:int(#group.types)
       for t = 1, #group.types do
-        writer:int(RANDOM_TYPES[group.types[t]] - 1)
+        writer:int(group.types[t])
       end
 
       writer:int(#group.sets)
       for s = 1, #group.sets do
         writer:int(group.sets[s].chance)
         for t = 1, #group.types do
-          writer:bytes(util.filter
-                           .except(group.sets[s].objects[t], '', EMPTY_ID))
+          writer:bytes(group.sets[s].objects[t])
         end
       end
     end
@@ -454,18 +367,19 @@ local Codec = {
     -- RANDOM ITEM TABLES
     -- ====================
 
-    writer:tag('map.randomItems')
-    writer:int(#map.randomItems)
-    for i = 1, #map.randomItems do
-      writer:tag('map.randomItems[' .. i .. ']')
-      local group = map.randomItems[i]
+    writer:tag('properties.randomItems')
+    writer:int(#properties.randomItems)
+    for i = 1, #properties.randomItems do
+      writer:tag('properties.randomItems[' .. i .. ']')
+      local group = properties.randomItems[i]
       writer:int(group.id)
       writer:string(group.name)
       writer:int(#group.sets)
       for s = 1, #group.sets do
+        writer:int(#group.sets[s])
         for i = 1, #group.sets[s] do
           writer:int(group.sets[s][i].chance)
-          writer:bytes(util.filter.except(group.sets[s][i].item, '', EMPTY_ID))
+          writer:bytes(group.sets[s][i].item)
         end
       end
     end

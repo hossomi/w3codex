@@ -67,6 +67,14 @@ describe('Util:', function()
           [21] = false,
           [22] = false,
           [23] = false,
+          [24] = false,
+          [25] = false,
+          [26] = false,
+          [27] = false,
+          [28] = false,
+          [29] = false,
+          [30] = false,
+          [31] = false,
           int = players.int
         })
       end)
@@ -81,7 +89,7 @@ describe('Util:', function()
         assert.are.equals(tostring(players), '0x01010000')
       end)
 
-      it('ipairs(players) should iterate without mappings', function()
+      it('ipairs(players) should iterate all', function()
         local players = util.flags.players(0x00000101)
 
         local calls = spy.new()
@@ -89,28 +97,18 @@ describe('Util:', function()
           calls(k, v)
         end
 
-        assert.spy(calls).called(2)
-        assert.spy(calls).called_with(0, nil)
-        assert.spy(calls).called_with(8, nil)
-      end)
-
-      it('ipairs(players) should iterate with mappings', function()
-        local players = util.flags.players(0x00000111, {[0] = 1, [8] = 2})
-
-        local calls = spy.new()
-        for k, v in ipairs(players) do
-          calls(k, v)
-        end
-
-        assert.spy(calls).called(2)
-        assert.spy(calls).called_with(0, 1)
-        assert.spy(calls).called_with(8, 2)
+        assert.spy(calls).called(32)
+        assert.spy(calls).called_with(0, true)
+        assert.spy(calls).called_with(1, false)
+        assert.spy(calls).called_with(8, true)
+        assert.spy(calls).called_with(9, false)
+        -- Lazy...
       end)
     end)
 
-    describe('parse(int, mapping)', function()
+    describe('map(int, mapping)', function()
       it('should work without mappings', function()
-        local flags = util.flags.parse(0xC0010103)
+        local flags = util.flags.map(0xC0010103)
         assert.is_true(flags[0x00000001])
         assert.is_true(flags[0x00000002])
         assert.is_false(flags[0x00000004])
@@ -146,7 +144,7 @@ describe('Util:', function()
       end)
 
       it('should work with mappings', function()
-        local flags = util.flags.parse(0xC0010103, {
+        local flags = util.flags.map(0xC0010103, {
           a = 0x00000001,
           b = 0x00000004,
           c = 0x00010000,
@@ -162,17 +160,17 @@ describe('Util:', function()
       end)
 
       it('int() should work', function()
-        local flags = util.flags.parse(0x00000101)
+        local flags = util.flags.map(0x00000101)
         assert.are.equals(flags:int(), 0x00000101)
       end)
 
       it('tostring(flags) should work', function()
-        local flags = util.flags.parse(0x00000101)
+        local flags = util.flags.map(0x00000101)
         assert.are.equals(tostring(flags), '0x01010000')
       end)
 
       it('should reflect mapping change', function()
-        local flags = util.flags.parse(0x00000001,
+        local flags = util.flags.map(0x00000001,
                           {a = 0x00000001, b = 0x00000002})
         assert.are.equals(flags.a, flags[0x00000001])
         assert.are.equals(flags.b, flags[0x00000002])
@@ -184,7 +182,7 @@ describe('Util:', function()
       end)
 
       it('should reflect change to mapping', function()
-        local flags = util.flags.parse(0x00000001,
+        local flags = util.flags.map(0x00000001,
                           {a = 0x00000001, b = 0x00000002})
 
         assert.are.equals(flags.a, flags[0x00000001])
@@ -197,7 +195,7 @@ describe('Util:', function()
       end)
 
       it('pairs(flags) should iterate mappings', function()
-        local flags = util.flags.parse(0x00000001,
+        local flags = util.flags.map(0x00000001,
                           {a = 0x00000001, b = 0x00000002})
 
         local calls = spy.new()
@@ -211,7 +209,7 @@ describe('Util:', function()
       end)
 
       it('ipairs(flags) should iterate bits', function()
-        local flags = util.flags.parse(0x00000001,
+        local flags = util.flags.map(0x00000001,
                           {a = 0x00000001, b = 0x00000002})
 
         local calls = spy.new()

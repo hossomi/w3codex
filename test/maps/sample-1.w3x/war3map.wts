@@ -10,7 +10,7 @@ Any
 
 STRING 3
 {
-Sample map #1.
+Sample map #1
 }
 
 STRING 4
@@ -25,6 +25,71 @@ Player 1
 
 STRING 6
 {
+Player 2
+}
+
+STRING 7
+{
+Player 3
+}
+
+STRING 8
+{
+Player 7
+}
+
+STRING 9
+{
+Player 8
+}
+
+STRING 10
+{
+Player 9
+}
+
+STRING 11
+{
+Player 13
+}
+
+STRING 12
+{
+Player 14
+}
+
+STRING 13
+{
+Player 15
+}
+
+STRING 14
+{
+Player 22
+}
+
+STRING 15
+{
+Player 23
+}
+
+STRING 16
+{
+Player 24
+}
+
+STRING 17
+{
 Force 1
+}
+
+STRING 18
+{
+Force 2
+}
+
+STRING 19
+{
+Force 3
 }
 

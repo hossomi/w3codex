@@ -164,14 +164,14 @@ local function FileReader(file, bsize)
     flags = function(self, mapping)
       local data = multiunpack('I4', 1, self:read(4))
       if data then
-        return util.flags.parse(data, mapping)
+        return util.flags.map(data, mapping)
       end
     end,
 
-    players = function(self, playerIndex)
+    players = function(self)
       local data = multiunpack('I4', 1, self:read(4))
       if data then
-        return util.flags.players(data, playerIndex)
+        return util.flags.players(data)
       end
     end,
 
@@ -180,9 +180,9 @@ local function FileReader(file, bsize)
       if data then
         local values = {string.unpack('BBBB', data)}
         return {
-          red = values[1],
+          red = values[3],
           green = values[2],
-          blue = values[3],
+          blue = values[1],
           alpha = values[4]
         }
       end
@@ -288,8 +288,8 @@ local function FileWriter(file, bsize)
 
     color = function(self, data)
       if data then
-        self:write(string.pack('BBBB', data.red or 0, data.green or 0,
-                       data.blue or 0, data.alpha or 0))
+        self:write(string.pack('BBBB', data.blue or 0, data.green or 0,
+                       data.red or 0, data.alpha or 0))
       end
     end
   }

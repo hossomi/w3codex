@@ -1,21 +1,21 @@
 ﻿STRING 1
 {
-Sample #2
+Player 1
 }
 
 STRING 2
 {
-Any
+Player 2
 }
 
 STRING 3
 {
-Sample map #2.
+Player 3
 }
 
 STRING 4
 {
-Marcelo Hossomi
+Force 1
 }
 
 STRING 5
@@ -25,36 +25,16 @@ Sample #2
 
 STRING 6
 {
-Sample map #2
+Any
 }
 
 STRING 7
 {
-This is the sample map #2.
+Sample map #2.
 }
 
 STRING 8
 {
-Player 1
-}
-
-STRING 9
-{
-Player 2
-}
-
-STRING 11
-{
-Force 1
-}
-
-STRING 12
-{
-Force 2
-}
-
-STRING 13
-{
-Player 4
+Marcelo Hossomi
 }
 
