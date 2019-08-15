@@ -8,6 +8,6 @@ A Warcraft III map is composed of multiple binary files. The following links des
 - [Data types and structures](files/types.md)
 
 
-| File         | Description                |
-| ------------ | -------------------------- |
+| File                          | Description                |
+| ----------------------------- | -------------------------- |
 | [_war3map.w3i_](files/w3i.md) | Map and player properties. |

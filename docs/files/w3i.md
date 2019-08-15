@@ -61,7 +61,7 @@ Most of its information is available in the World Editor under the _Scenario_ me
 | &nbsp;  | `0x00000100` - Use custom abilities.                    |
 | &nbsp;  | `0x00000200` - Use custom upgrades.                     |
 | &nbsp;  | `0x00000800` - Show waves on cliff shores.              |
-| &nbsp;  | `0x00001000` - Show waves on rolling sho.               |
+| &nbsp;  | `0x00001000` - Show waves on rolling shores.            |
 
 ### `MapLoadingScreen`
 
@@ -85,11 +85,11 @@ Most of its information is available in the World Editor under the _Scenario_ me
 
 ### `MapWeather`
 
-| Type     | Description                                                                                             |
-| -------- | ------------------------------------------------------------------------------------------------------- |
-| `4CC`    | Weather code. `0000` if disabled.                                                                       |
+| Type     | Description                                                                                           |
+| -------- | ----------------------------------------------------------------------------------------------------- |
+| `4CC`    | Weather code. `0000` if disabled.                                                                     |
 | `string` | Environment sound label. Empty if disabled.<br/>**Values:** `Default`, `lake`, `psychotic`, `dungeon` |
-| `char`   | Tileset of custom lighting. `\0` if disabled.                                                           |
+| `char`   | Tileset of custom lighting. `\0` if disabled.                                                         |
 
 ### `MapWater`
 
@@ -109,8 +109,11 @@ Most of its information is available in the World Editor under the _Scenario_ me
 | `string`      | Player name.                                                                         |
 | `real`        | Starting location X.                                                                 |
 | `real`        | Starting location Y.                                                                 |
-| `PlayerFlags` | Players with low ally priority.                                                      |
-| `PlayerFlags` | Players with high ally priority.                                                     |
+| `PlayerFlags` | Players with low ally priority.*                                                     |
+| `PlayerFlags` | Players with high ally priority.*                                                    |
+
+\* Computer, neutral and rescuable players do not use ally priorities.
+However, if they were user players at some point, these flags will be kept as they were.
 
 ### `Force`
 
@@ -122,8 +125,11 @@ Most of its information is available in the World Editor under the _Scenario_ me
 | &nbsp;        | `0x00000008` - Shared vision                |
 | &nbsp;        | `0x00000010` - Shared unit control          |
 | &nbsp;        | `0x00000020` - Shared advanced unit control |
-| `PlayerFlags` | Players in this force.                      |
+| `PlayerFlags` | Players in this force.*                     |
 | `string`      | Force name.                                 |
+
+\* The force created when the map is created will usually have unused player flags set to `1`.
+This happens because, initially, that force contains all players. When changed, the unused player flags are kept as they were.
 
 ### `UpgradeAvailability`
 
@@ -132,10 +138,13 @@ If a upgrade level is not specified in this list, then it is available by defaul
 
 | Type          | Description                                                                          |
 | ------------- | ------------------------------------------------------------------------------------ |
-| `PlayerFlags` | Affected players.                                                                    |
+| `PlayerFlags` | Affected players.*                                                                   |
 | `4CC`         | Upgrade ID.                                                                          |
 | `int`         | Upgrade level.                                                                       |
 | `int`         | Upgrade availability:<br/>`0` - Unavailable<br/>`1` - Available<br/>`2` - Researched |
+
+\* Unused player flags will be kept as is if they were once used, so there may be unused bits `1`.
+Because of that, there may be entries entirely related to unused players!
 
 ### `TechAvailability`
 
@@ -144,8 +153,11 @@ If the tech is present in this list, then it is disabled.
 
 | Type          | Description                      |
 | ------------- | -------------------------------- |
-| `PlayerFlags` | Affected players.                |
+| `PlayerFlags` | Affected players.*               |
 | `4CC`         | Tech ID (unit, item or ability). |
+
+\* Unused player flags will be kept as is if they were once used, so there may be unused bits `1`.
+Because of that, there may be entries entirely related to unused players!
 
 ### `RandomGroup`
 
@@ -156,14 +168,14 @@ Each row is a set with a rolling chance.
 Each pool is completely independent except for the set chances that are shared.
 When referring to a random group, a pool of acceptable type must also be chosen.
 
-| Type                | Description                                                  |
-| ------------------- | ------------------------------------------------------------ |
-| `int`               | Group ID. Used in references to this group.                  |
-| `string`            | Group name.                                                  |
-| `int`               | Number of pools `N`.                                         |
-| `int[N]`            | Pool types:<br/>`0` - Unit<br/>`1` - Building<br/>`2` - Item |
-| `int`               | Number of entries `S`.                                       |
-| `RandomGroupSet[S]` | Group sets.                                                  |
+| Type                                   | Description                                                  |
+| -------------------------------------- | ------------------------------------------------------------ |
+| `int`                                  | Group ID. Used in references to this group.                  |
+| `string`                               | Group name.                                                  |
+| `int`                                  | Number of pools `N`.                                         |
+| `int[N]`                               | Pool types:<br/>`0` - Unit<br/>`1` - Building<br/>`2` - Item |
+| `int`                                  | Number of entries `S`.                                       |
+| [`RandomGroupSet[S]`](#randomgroupset) | Group sets.                                                  |
 
 ### `RandomGroupSet`
 
@@ -185,19 +197,19 @@ A random item table contains multiple sets, each containing an item pool from wh
 Each set rolls independently, but all sets in a table are always rolled together.
 The table yields the result of each of its sets (if any).
 
-| Type               | Description                                 |
-| ------------------ | ------------------------------------------- |
-| `int`              | Table ID. Used in references to this table. |
-| `string`           | Table Name.                                 |
-| `int`              | Number of sets `N`.                         |
-| `RandomItemSet[N]` | Table sets.                                 |
+| Type                                 | Description                                 |
+| ------------------------------------ | ------------------------------------------- |
+| `int`                                | Table ID. Used in references to this table. |
+| `string`                             | Table Name.                                 |
+| `int`                                | Number of sets `N`.                         |
+| [`RandomItemSet[N]`](#randomitemset) | Table sets.                                 |
 
 ### `RandomItemSet`
 
-| Type                 | Description            |
-| -------------------- | ---------------------- |
-| `int`                | Number of entries `E`. |
-| `RandomItemEntry[E]` | Set entries.           |
+| Type                                     | Description            |
+| ---------------------------------------- | ---------------------- |
+| `int`                                    | Number of entries `E`. |
+| [`RandomItemEntry[E]`](#randomitementry) | Set entries.           |
 
 ### `RandomItemEntry`
 
