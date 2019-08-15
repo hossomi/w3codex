@@ -22,7 +22,7 @@ local function max(a, b)
   return math.max(a, b)
 end
 
-local Codec = {
+return {
 
   decode = function(self, path)
     local reader = wio.FileReader(path)
@@ -388,18 +388,3 @@ local Codec = {
     return writer.tags
   end
 }
-
-map, tags = Codec:decode('test/maps/' .. arg[1] .. '.w3x/war3map.w3i')
-for label, start in util.tables.spairs(tags) do
-  print(label, start)
-end
-
-local file = assert(io.open('out/' .. arg[1] .. '.yml', 'w'))
-file:write(yaml.dump({map}))
-file:close()
-
-print()
-tags = Codec:encode(map, 'out/' .. arg[1] .. '.w3i')
-for label, start in util.tables.spairs(tags) do
-  print(label, start)
-end
