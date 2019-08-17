@@ -14,7 +14,7 @@ describe('Codecs', function()
   for codec, file in pairs(codecs) do
 
     describe(codec, function()
-        
+
       for i, sample in ipairs(samples) do
         local codec = require('src.codecs.' .. codec)
         local file = sample .. '/' .. file
