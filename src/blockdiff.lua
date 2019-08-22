@@ -45,59 +45,38 @@ local function lcs(x, y, size, px, py, store)
   return store[px][py]
 end
 
-local function nextBlock(p, size, source)
-  return source:sub(p, p + size - 1), p + size
+local function find(source, block, start)
+  if #block > 0 then
+    local bstart, bend = source:find(block, start)
+    local jump = bstart > start and {from = start, to = bstart - 1} or nil
+    return jump, bend + 1
+  else
+    return {from = start, to = #source}
+  end
+
 end
 
 local function bindiff(original, new)
-  local blockSize = 4
+  local bsize = 4
   local colored = true
-  local common = lcs(original, new, blockSize)
-  print('Common', common)
+  local common = lcs(original, new, bsize)
 
-  local o, n, c, nextc = 1, 1, 1
-  local oblock, nblock, cblock
+  local o, n, c = 1, 1, 1
+  local cblock, jump
   local removed, added = {}, {}
-  local r, a
 
-  while c < #common do
-    oblock = nextBlock(o, blockSize, original)
-    nblock = nextBlock(n, blockSize, new)
-    cblock = nextBlock(c, blockSize, common)
-    print(cblock, oblock, nblock)
+  repeat
+    cblock = common:sub(c, c + bsize - 1)
 
-    if oblock ~= cblock then
-      r = r or o
-      print('Removing at', r)
-      o = o + blockSize
-    elseif r and oblock == cblock then
-      removed[#removed + 1] = {from = r, to = o - 1}
-      r = nil
-    end
+    jump, o = find(original, cblock, o)
+    table.insert(removed, jump)
 
-    if nblock ~= cblock then
-      a = a or n
-      print('Adding at', a)
-      n = n + blockSize
-    elseif a and nblock == cblock then
-      added[#added + 1] = {from = a, to = n - 1}
-      a = nil
-    end
+    jump, n = find(new, cblock, n)
+    table.insert(added, jump)
 
-    if not r and not a then
-      c = c + blockSize
-      o = o + blockSize
-      n = n + blockSize
-    end
-  end
+    c = c + bsize
+  until #cblock == 0
 
-  if o < #original then
-    removed[#removed + 1] = {from = o, to = #original}
-  end
-
-  if n < #new then
-    added[#added + 1] = {from = n, to = #new}
-  end
   return {added = added, removed = removed}
 end
 
@@ -110,11 +89,20 @@ local util = require 'src.util'
 -- print(lcs('abcdefgh', 'abcfghkjlgh', 3) .. '.', calcs, hits)
 -- print(lcs('abc', 'bdf'))
 
-local diff = bindiff('ABCDEFGHIJKLQRST', 'ABCD0123IJKLMNOP')
-for i, v in ipairs(diff.removed) do
-  print('R', v.from, v.to)
-end
+-- local diff = bindiff('ABCDEFGHIJKLQRST', 'ABCD0123IJKLMNOP')
+-- for i, v in ipairs(diff.removed) do
+--   print('R', v.from, v.to)
+-- end
 
-for i, v in ipairs(diff.added) do
-  print('A', v.from, v.to)
-end
+-- for i, v in ipairs(diff.added) do
+--   print('A', v.from, v.to)
+-- end
+
+-- local diff = bindiff('aaaaSKDHAKDkshAKHKSHDLhuiFSDTUyiasdgAS', 'aaaahdoISAHIDGFKdsgfDHFKhysdiughfkj')
+-- for i, v in ipairs(diff.removed) do
+--   print('R', v.from, v.to)
+-- end
+
+-- for i, v in ipairs(diff.added) do
+--   print('A', v.from, v.to)
+-- end
