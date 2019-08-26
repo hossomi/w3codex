@@ -172,7 +172,7 @@ describe('WIO', function()
       it('should read in order', function()
         local reader = wio.FileReader('test/wio/color.bin')
         assert.are.same(reader:color(),
-            {red = 160, green = 176, blue = 192, alpha = 208})
+            {red = 192, green = 176, blue = 160, alpha = 208})
       end)
 
       it('should return nil if no more data', function()
@@ -336,7 +336,7 @@ describe('WIO', function()
 
     it('should write color', function()
       writer:color({red = 65, green = 66, blue = 67, alpha = 68})
-      assert.data('ABCD')
+      assert.data('CBAD')
     end)
 
     it('should write flags', function()
