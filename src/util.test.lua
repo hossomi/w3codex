@@ -23,6 +23,53 @@ describe('Util:', function()
     end)
   end)
 
+  describe('tables', function()
+
+    describe('snext(t)', function()
+      it('should iterate string keys in order', function()
+        local t = {b = 2, d = 4, c = 3, a = 1}
+        local next = util.tables.snext(t)
+        assert.are.same({next()}, {'a', 1})
+        assert.are.same({next()}, {'b', 2})
+        assert.are.same({next()}, {'c', 3})
+        assert.are.same({next()}, {'d', 4})
+      end)
+
+      it('should iterate numeric keys in order', function()
+        local t = {[4] = 2, [8] = 4, [6] = 3, [2] = 1}
+        local next = util.tables.snext(t)
+        assert.are.same({next()}, {2, 1})
+        assert.are.same({next()}, {4, 2})
+        assert.are.same({next()}, {6, 3})
+        assert.are.same({next()}, {8, 4})
+      end)
+    end)
+
+    describe('spairs(t)', function()
+      it('should iterate string keys in order', function()
+        local t = {b = 2, d = 4, c = 3, a = 1}
+        local result = {}
+
+        for k, v in util.tables.spairs(t) do
+          table.insert(result, {k, v})
+        end
+
+        assert.are.same(result, {{'a', 1}, {'b', 2}, {'c', 3}, {'d', 4}})
+      end)
+
+      it('should iterate numeric keys in order', function()
+        local t = {[4] = 2, [8] = 4, [6] = 3, [2] = 1}
+ local result = {}
+
+        for k, v in util.tables.spairs(t) do
+          table.insert(result, {k, v})
+        end
+        
+        assert.are.same(result, {{2, 1}, {4, 2}, {6, 3}, {8, 4}})
+      end)
+    end)
+  end)
+
   describe('flags', function()
 
     describe('msb(int)', function()

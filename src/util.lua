@@ -28,24 +28,28 @@ local format = {
   end
 }
 
+local function snext(t)
+  local keys = {}
+  for k in pairs(t) do
+    keys[#keys + 1] = k
+  end
+  table.sort(keys)
+
+  local i = 0
+  return function()
+    i = i + 1
+    if keys[i] ~= nil then
+      return keys[i], t[keys[i]]
+    end
+  end
+end
+
 local tables = {
 
+  snext = snext,
+
   spairs = function(t)
-    local keys = {}
-    for k in pairs(t) do
-      keys[#keys + 1] = k
-    end
-    table.sort(keys)
-
-    local i = 0
-    local function nextSorted(table)
-      i = i + 1
-      if keys[i] ~= nil then
-        return keys[i], t[keys[i]]
-      end
-    end
-
-    return nextSorted, t, nil
+    return snext(t), t, nil
   end
 }
 
