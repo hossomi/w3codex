@@ -59,12 +59,12 @@ describe('Util:', function()
 
       it('should iterate numeric keys in order', function()
         local t = {[4] = 2, [8] = 4, [6] = 3, [2] = 1}
- local result = {}
+        local result = {}
 
         for k, v in util.tables.spairs(t) do
           table.insert(result, {k, v})
         end
-        
+
         assert.are.same(result, {{2, 1}, {4, 2}, {6, 3}, {8, 4}})
       end)
     end)
