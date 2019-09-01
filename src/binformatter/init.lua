@@ -15,6 +15,7 @@ local function BinFormatter(columns, bsize)
 
     local nextColor = util.tables.snext(dataColors)
     local c, color = nextColor()
+    local lastColor
 
     for l = 1, #data, lsize do
       local lend = l + lsize - 1
@@ -23,22 +24,36 @@ local function BinFormatter(columns, bsize)
       local blocks = {}
       local chars = {}
 
+      if lastColor then
+        table.insert(blocks, tostring(colors[lastColor]))
+        table.insert(chars, tostring(colors[lastColor]))
+      end
+
       while c and c < lend do
         local send = math.floor(c / bsize) * bsize
+        
         table.insert(blocks, (data:sub(sstart, send):gsub(bpattern, d2b)))
         table.insert(blocks, tostring(colors[color]))
 
+        table.insert(chars, (data:sub(sstart, send):gsub('[\x00-\x1F\x7F-\xFF]', '.')))
+        table.insert(chars, tostring(colors[color]))
+
         sstart = send + 1
+        lastColor = color
         c, color = nextColor()
       end
 
       table.insert(blocks, (data:sub(sstart, lend):gsub(bpattern, d2b)))
+      table.insert(blocks, tostring(colors.clear))
+
+      table.insert(chars, (data:sub(sstart, lend):gsub('[\x00-\x1F\x7F-\xFF]', '.')))
+      table.insert(chars, tostring(colors.clear))
       
       table.insert(out, string.format('0x%08X: ', l - 1))
 
       table.insert(out, table.concat(blocks))
       -- table.insert(out, string.rep(' ', blockTotalSize - #blocks + 2))
-      -- table.insert(out, (line:gsub('[\x00-\x1F\x7F-\xFF]', '.')))
+      table.insert(out, table.concat(chars))
       table.insert(out, '\n')
     end
 
