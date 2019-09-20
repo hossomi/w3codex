@@ -1,3 +1,8 @@
+-- A list of ranges (from, to). Use pairs(ranges) to iterate all ranges:
+--
+-- for from, to in pairs(ranges) do
+--   ...
+-- end
 local function RangeList()
   local list = {
     ranges = {},

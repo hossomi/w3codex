@@ -1,55 +1,24 @@
 local util = require 'src.util'
 local RangeList = require 'src.blockdiff.RangeList'
+local lcs = require 'src.blockdiff.lcs'
 local colors = require 'term.colors'
 
--- Longest lcs sequence (LCS)
-
-local function normalize(s, size)
-  local r = #s % size
-  return r ~= 0 and (s .. string.rep('\0', size - r)) or s
-end
-
-local function lcs(x, y, size, px, py, cache)
-  if not cache then
-    cache = setmetatable({}, {
-      __index = function(cache, key)
-        cache[key] = {}
-        return cache[key]
-      end
-    })
-
-    x = normalize(x, size)
-    y = normalize(y, size)
-    return lcs(x, y, size, #x, #y, cache)
-  end
-
-  if px == 0 or py == 0 then
-    return ''
-  end
-
-  if cache[px][py] then
-    return cache[px][py]
-  end
-
-  local i = -size
-  repeat
-    i = i + size
-  until px - i == 0 or py - i == 0 or x:sub(px - i - (size - 1), px)
-      ~= y:sub(py - i - (size - 1), py)
-
-  if i == 0 then
-    local lcsx = lcs(x, y, size, px - size, py, cache)
-    local lcsy = lcs(x, y, size, px, py - size, cache)
-    cache[px][py] = #lcsx >= #lcsy and lcsx or lcsy
-  else
-    cache[px][py] = lcs(x, y, size, px - i, py - i, cache)
-                        .. x:sub(px - i + 1, px)
-  end
-  return cache[px][py]
-end
-
--- Block diff
-
+-- Find a data block starting from given position. The returned values are
+-- actually those that defines ranges that EXCLUDE the found block:
+--  - The next byte after the found block.
+--  - The given start position
+--  - The byte before the found block.
+-- 
+-- If the block starts at the start position, only the first value is returned.
+-- If the block is empty, it considers the block with size 0 is at the end.
+-- Examples:
+-- 
+-- find('aaaabbbbccccdddd', 'bbbb', 1)
+--   9 1 4
+-- find('aaaabbbbccccdddd', 'aaaa', 1)
+--   5
+-- find('aaaabbbbccccdddd', '', 1)
+--   17, 1, 16
 local function find(source, block, start)
   if #block > 0 then
     local bstart, bend = source:find(block, start)
@@ -62,6 +31,14 @@ local function find(source, block, start)
   return #source + 1, start, #source
 end
 
+-- Calculates the diff between two data strings by blocks of given size.
+-- Returns a table with two RangeLists, 'removed' and 'added', each containing
+-- ranges that were removed or added.
+-- Examples:
+--
+-- BlockDiff('aaabbbcccddd', 'bbbccceeefff', 3)
+--   removed: [(1, 3), (10, 12)]
+--   added:   [(7, 12)]
 local function BlockDiff(original, new, bsize)
   local lcs = lcs(original, new, bsize)
 
@@ -70,9 +47,7 @@ local function BlockDiff(original, new, bsize)
 
   local diff = {
     removed = RangeList(),
-    added = RangeList(),
-    original = original,
-    new = new
+    added = RangeList()
   }
 
   repeat
@@ -90,17 +65,4 @@ local function BlockDiff(original, new, bsize)
   return diff
 end
 
-local util = require 'src.util'
-local a = util.format.b2x(
-              assert(io.open('test/maps/sample-1.w3x/war3map.w3i')):read('*all'))
-local b = util.format.b2x(
-              assert(io.open('test/maps/sample-2.w3x/war3map.w3i')):read('*all'))
-local diff = BlockDiff(a, b, 2)
-
-for i, v in pairs(diff.removed) do
-  print('R', i, v)
-end
-
-for i, v in pairs(diff.added) do
-  print('A', i, v)
-end
+return BlockDiff
