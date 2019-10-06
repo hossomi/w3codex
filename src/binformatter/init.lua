@@ -74,7 +74,8 @@ local function BinFormatter(columns, bsize)
       local chars = {}
 
       -- If the last line was colored, continue coloring.
-      if isColored(clast) then
+      -- Unless the next color change is at the start of the line.
+      if isColored(clast) and (not c or c > l) then
         table.insert(blocks, tostring(clast))
         table.insert(chars, tostring(clast))
       end

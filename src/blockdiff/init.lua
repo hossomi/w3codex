@@ -65,7 +65,7 @@ local function BlockDiff(original, new, bsize)
     added = RangeList(),
 
     format = function(self, formatter)
-      formatter = formatter or BinFormatter(8, bsize)
+      formatter = formatter or BinFormatter(4, bsize)
       return {
         original = formatter(original, rangesToColor(self.removed, term.colors.red)),
         new = formatter(new, rangesToColor(self.added, term.colors.green))

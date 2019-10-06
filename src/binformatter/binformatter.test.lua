@@ -5,9 +5,11 @@ local colors = require 'term.colors'
 local colormap = setmetatable({
     ['['] = tostring(colors.red),
     ['{'] = tostring(colors.green),
+    ['<'] = tostring(colors.cyan),
     ['!'] = tostring(colors.onwhite),
     [']'] = tostring(colors.clear),
-    ['}'] = tostring(colors.clear)
+    ['}'] = tostring(colors.clear),
+    ['>'] = tostring(colors.clear)
   }, {
     __index = function(self, key)
       return key
@@ -195,6 +197,26 @@ describe('BinFormatter', function()
           '0x00000000  [AA AA] {BB BB}  [..]{..}\n'
         ..'0x00000004  {CC CC DD DD}  {....}\n')
   end)
+
+  it('should switch color multiple times', function()
+    local formatter = BinFormatter(4, 1)
+    assert.binformat(formatter)
+      .colors({[1] = colors.red, [3] = colors.green, [7] = colors.cyan})
+      .hex_equals(
+          'AAAABBBBCCCCDDDD',
+          '0x00000000  [AA AA] {BB BB}  [..]{..}\n'
+        ..'0x00000004  {CC CC} <DD DD>  {..}<..>\n')
+  end)
+
+  it('should switch color at line start', function()
+    local formatter = BinFormatter(4, 1)
+    assert.binformat(formatter)
+      .colors({[1] = colors.red, [5] = colors.green})
+      .hex_equals(
+          'AAAABBBBCCCCDDDD',
+          '0x00000000  [AA AA BB BB]  [....]\n'
+        ..'0x00000004  {CC CC DD DD}  {....}\n')
+  end)
   
   it('should clear color', function()
     local formatter = BinFormatter(4, 1)
@@ -203,6 +225,16 @@ describe('BinFormatter', function()
       .hex_equals(
           'AAAABBBBCCCCDDDD',
           '0x00000000  [AA AA] BB BB  [..]..\n'
+        ..'0x00000004  CC CC DD DD  ....\n')
+  end)
+
+  it('should clear color at line start', function()
+    local formatter = BinFormatter(4, 1)
+    assert.binformat(formatter)
+      .colors({[1] = colors.red, [5] = colors.clear})
+      .hex_equals(
+          'AAAABBBBCCCCDDDD',
+          '0x00000000  [AA AA BB BB]  [....]\n'
         ..'0x00000004  CC CC DD DD  ....\n')
   end)
   
