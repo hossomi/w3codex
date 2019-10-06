@@ -1,7 +1,8 @@
 local util = require 'src.util'
 local RangeList = require 'src.blockdiff.RangeList'
 local lcs = require 'src.blockdiff.lcs'
-local colors = require 'term.colors'
+local BinFormatter = require 'src.binformatter'
+local term = require 'term'
 
 -- Find a data block starting from given position. The returned values are
 -- actually those that defines ranges that EXCLUDE the found block:
@@ -20,6 +21,10 @@ local colors = require 'term.colors'
 -- find('aaaabbbbccccdddd', '', 1)
 --   17, 1, 16
 local function find(source, block, start)
+  if start > #source then
+    return start
+  end
+
   if #block > 0 then
     local bstart, bend = source:find(block, start)
     if bstart > start then
@@ -29,6 +34,15 @@ local function find(source, block, start)
   end
 
   return #source + 1, start, #source
+end
+
+local function rangesToColor(list, color)
+  local colors = {}
+  for from, to in pairs(list) do
+    colors[from] = color
+    colors[to + 1] = term.colors.clear
+  end
+  return colors
 end
 
 -- Calculates the diff between two data strings by blocks of given size.
@@ -47,7 +61,16 @@ local function BlockDiff(original, new, bsize)
 
   local diff = {
     removed = RangeList(),
-    added = RangeList()
+
+    added = RangeList(),
+
+    format = function(self, formatter)
+      formatter = formatter or BinFormatter(8, bsize)
+      return {
+        original = formatter(original, rangesToColor(self.removed, term.colors.red)),
+        new = formatter(new, rangesToColor(self.added, term.colors.green))
+      }
+    end
   }
 
   repeat
