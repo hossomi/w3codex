@@ -69,7 +69,6 @@ local function BinFormatter(columns, bsize)
       -- How many bytes to complete a full line
       local lfill = lsize - (lend - l + 1)
       local sstart = l
-
       local blocks = {}
       local chars = {}
 

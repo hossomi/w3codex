@@ -1,5 +1,5 @@
 local util = require 'src.util'
-local RangeList = require 'src.blockdiff.RangeList'
+local RangeList = require 'src.blockdiff.rangelist'
 local lcs = require 'src.blockdiff.lcs'
 local BinFormatter = require 'src.binformatter'
 local term = require 'term'
@@ -64,8 +64,8 @@ local function BlockDiff(original, new, bsize)
 
     added = RangeList(),
 
-    format = function(self, formatter)
-      formatter = formatter or BinFormatter(4, bsize)
+    format = function(self, columns)
+      formatter = BinFormatter(columns or 8, bsize)
       return {
         original = formatter(original, rangesToColor(self.removed, term.colors.red)),
         new = formatter(new, rangesToColor(self.added, term.colors.green))

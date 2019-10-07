@@ -23,20 +23,12 @@ describe('BinFormatter', function()
 
   assert.binformat = function(formatter)
     return {
-      equals = function(actual, expected)
-        assert.are.equals(formatter(actual), expected)
-      end,
-
       hex_equals = function(actual, expected)
         assert.are.equals('\n' .. formatter(util.format.x2b(actual)), '\n' .. expected)
       end,
 
       colors = function(colors)
         return {
-          equals = function(actual, expected)
-            assert.are.equals(formatter(actual, colors), colormap(expected))
-          end,
-
           hex_equals = function(actual, expected)
             assert.are.equals('\n' .. formatter(util.format.x2b(actual), colors), '\n' .. colormap(expected))
           end
@@ -95,7 +87,7 @@ describe('BinFormatter', function()
     end
 
     local formatter = BinFormatter(4, 2)
-    assert.binformat(formatter).equals(data,
+    assert.are.equal(formatter(data),
         '0x00000000  0001 0203 0405 0607  ........\n'
       ..'0x00000008  0809 0A0B 0C0D 0E0F  ........\n'
       ..'0x00000010  1011 1213 1415 1617  ........\n'
