@@ -2,11 +2,6 @@ local util = require 'src.util'
 local term = require 'term'
 local CLR = term.colors.clear
 
--- Convenience to convert binary to hexadecimal with a trailing whitespace.
-local function d2b(block)
-  return util.format.b2x(block) .. ' '
-end
-
 local function isColored(color)
   return color and color ~= CLR
 end
@@ -45,15 +40,18 @@ local function BinFormatter(columns, bsize)
     -- Color is cleared before printing the next, unless there was/is clear.
     local binprint = function(segment, color, blocks, chars)
       if #segment > 0 then
-        -- Cut the last trailing space with sub(1, -2)
-        table.insert(blocks, (segment:gsub(pattern, d2b)):sub(1, -2))
-        if isColored(clast) then table.insert(blocks, tostring(CLR)) end
-    
-        table.insert(blocks, ' ')
-
         -- Replace non-printable characters with .
         table.insert(chars, (segment:gsub('[\x00-\x1F\x7F-\xFF]', '.')))
         if isColored(clast) then table.insert(chars, tostring(CLR)) end
+        
+        -- Work with hexadecimal for blocks
+        local segment = util.format.b2x(segment)
+        local bsize = bsize * 2
+        for i = 1, #segment, bsize do
+          table.insert(blocks, segment:sub(i, i + bsize - 1))
+          table.insert(blocks, ' ')
+        end
+        if isColored(clast) then table.insert(blocks, #blocks, tostring(CLR)) end
       end
 
       -- Print next color if any.

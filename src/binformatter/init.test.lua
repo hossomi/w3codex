@@ -73,12 +73,12 @@ describe('BinFormatter', function()
       ..'0x0000000C  0123AB                       .#.\n')
   end)
 
-  -- it('should format partial block', function()
-  --   local formatter = BinFormatter(2, 3)
-  --   assert.binformat(formatter).hex_equals(
-  --       'AAAAAABBBB',
-  --       '0x00000000  AAAAAA BBBB    .....\n')
-  -- end)
+  it('should format partial block', function()
+    local formatter = BinFormatter(2, 3)
+    assert.binformat(formatter).hex_equals(
+        'AAAAAABBBB',
+        '0x00000000  AAAAAA BBBB    .....\n')
+  end)
 
   it('should show only visible characters', function()
     local data = ''
